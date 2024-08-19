@@ -10,13 +10,34 @@ This README would normally document whatever steps are necessary to get your app
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* Setup venv and install requirements
 
+    python -m venv venv
+
+    source venv/bin/activate
+
+    pip install -r requirements.txt
+
+* set db parameters in dev.env file and export them using env.sh
+
+    source env.sh
+
+* start fastapi application
+
+    uvicorn app.main:app --reload    
+
+---
+
+Before commit run "black ./app"
+
+---
+To install psycopg2 first install:
+sudo apt-get install libpq-dev
+
+---
+
+To try out APIs, start fastapi application and navigate to 
+http://localhost:8000/docs
 ### Contribution guidelines ###
 
 * Writing tests
