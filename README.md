@@ -24,7 +24,7 @@ This README would normally document whatever steps are necessary to get your app
 
 * start fastapi application
 
-    uvicorn app.main:app --reload    
+    uvicorn app.main_dev:app --reload --port 8888
 
 ---
 
@@ -36,7 +36,7 @@ sudo apt-get install libpq-dev
 
 ---
 
-To try out APIs, start fastapi application and navigate to 
+To try out APIs, start fastapi application and navigate to
 http://localhost:8000/docs
 ### Contribution guidelines ###
 
