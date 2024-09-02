@@ -37,7 +37,7 @@ sudo apt-get install libpq-dev
 ---
 
 To try out APIs, start fastapi application and navigate to
-http://localhost:8000/docs
+http://localhost:8888/api/docs
 ### Contribution guidelines ###
 
 * Writing tests

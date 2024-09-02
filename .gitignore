@@ -4,7 +4,7 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 #db
-gnode_app.db
+db/*.db
 
 #venv
 venv/
@@ -53,4 +53,3 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
-
