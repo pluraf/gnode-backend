@@ -15,6 +15,9 @@ import app.crud.users as user_crud
 import app.schemas.users as user_schema
 from app.dependencies import get_db
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -25,6 +28,28 @@ class Token(BaseModel):
 
 
 router = APIRouter()
+
+
+def load_private_key_from_file():
+    private_key_path = os.getenv("GNODE_PRIVATE_KEY_PASS")
+    if not private_key_path:
+        raise RuntimeError()
+
+    with open(private_key_path, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(
+            key_file.read(), password=None, backend=default_backend()
+        )
+    return private_key
+
+
+def load_public_key_from_file():
+    public_key_path = os.getenv("GNODE_PUBLIC_KEY_PASS")
+    if not public_key_path:
+        raise RuntimeError()
+
+    with open(public_key_path, "rb") as key_file:
+        public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
+    return public_key
 
 
 def authenticate_user(db_session, username: str, password: str):
@@ -52,9 +77,10 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, os.getenv("GNODE_TOKEN_SECRET_KEY"), algorithm=settings.ALGORITHM
-    )
+
+    private_key = load_private_key_from_file()
+
+    encoded_jwt = jwt.encode(to_encode, private_key, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -78,7 +104,8 @@ async def login_for_access_token(
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], db_session: Session = Depends(get_db)
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db_session: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,9 +113,8 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(
-            token, os.getenv("GNODE_TOKEN_SECRET_KEY"), algorithms=[settings.ALGORITHM]
-        )
+        public_key = load_public_key_from_file()
+        payload = jwt.decode(token, public_key, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
