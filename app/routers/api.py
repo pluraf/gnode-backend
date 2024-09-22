@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.routers import users
 from app.routers import authentication
+from app.routers import authbundle
 
 import app.settings as settings
 
@@ -16,3 +17,4 @@ async def retrieve_home():
 
 router.include_router(users.router, prefix="/user")
 router.include_router(authentication.router, prefix=settings.TOKEN_AUTH_URL)
+router.include_router(authbundle.router, prefix="/authbundle")
