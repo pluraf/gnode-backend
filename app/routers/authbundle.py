@@ -84,3 +84,4 @@ def lock_db():
 
 def unlock_db(fd):
     fcntl.lockf(fd, fcntl.LOCK_UN)
+    fd.close()
