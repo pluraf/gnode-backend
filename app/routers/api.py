@@ -14,5 +14,5 @@ async def retrieve_home():
     return "Welcome!!!"
 
 
-router.include_router(users.router, prefix="/users")
+router.include_router(users.router, prefix="/user")
 router.include_router(authentication.router, prefix=settings.TOKEN_AUTH_URL)
