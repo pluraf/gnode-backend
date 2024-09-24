@@ -1,13 +1,15 @@
 import uuid
 import fcntl
 
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException, status
+from fastapi import APIRouter, Form, File, Depends, UploadFile, HTTPException, status
 from fastapi.responses import JSONResponse
 from typing import Optional
 
 from sqlalchemy import exc, create_engine, Column, String, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+from app.routers import authentication
 
 
 Base = declarative_base()
@@ -36,7 +38,8 @@ async def authbundle_create(
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
-    keyfile: Optional[UploadFile] = File(None)
+    keyfile: Optional[UploadFile] = File(None),
+    _: str = Depends(authentication.validate_jwt)
 ):
     if not authbundle_id:
         authbundle_id = uuid.uuid4().hex

@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Form, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -50,6 +50,19 @@ def load_public_key_from_file():
     with open(public_key_path, "rb") as key_file:
         public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
     return public_key
+
+
+def validate_jwt(token: str = Form(...)):
+    credentials_exception = HTTPException(
+                                status_code = status.HTTP_401_UNAUTHORIZED, 
+                                detail = "Token is not valid",
+                                headers = {"WWW-Authenticate": "Bearer"}
+                            )
+    try:
+        public_key = load_public_key_from_file()
+        jwt.decode(token, public_key, algorithms=settings.ALGORITHM)
+    except InvalidTokenError:
+        raise credentials_exception
 
 
 def authenticate_user(db_session, username: str, password: str):
