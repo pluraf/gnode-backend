@@ -12,7 +12,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import app.crud.users as user_crud
-import app.schemas.users as user_schema
+import app.schemas.user as user_schema
 from app.dependencies import get_db
 
 from cryptography.hazmat.primitives import serialization
@@ -52,9 +52,9 @@ def load_public_key_from_file():
     return public_key
 
 
-def validate_jwt(token: str = Form(...)):
+def validate_jwt(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
-                                status_code = status.HTTP_401_UNAUTHORIZED, 
+                                status_code = status.HTTP_401_UNAUTHORIZED,
                                 detail = "Token is not valid",
                                 headers = {"WWW-Authenticate": "Bearer"}
                             )

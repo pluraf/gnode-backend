@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Annotated, List
 
 import app.crud.users as user_crud
-import app.schemas.users as user_schema
+import app.schemas.user as user_schema
 from app.dependencies import get_db
 
 from app.routers import authentication

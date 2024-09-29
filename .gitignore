@@ -5,6 +5,7 @@
 
 #db
 db/*.db
+db/*.sqlite
 
 #venv
 venv/

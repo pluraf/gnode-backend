@@ -1,9 +1,9 @@
 from sqlalchemy import Boolean, Column, Integer, String
 
-from app.database_setup import Base
+from app.database_setup import DefaultBase
 
 
-class UserModel(Base):
+class UserModel(DefaultBase):
     __tablename__ = "gnode_users"
 
     id = Column(Integer, primary_key=True)

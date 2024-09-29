@@ -3,8 +3,8 @@ from passlib.hash import bcrypt
 
 import os
 
-from app.models.users import UserModel
-import app.schemas.users as user_schema
+from app.models.user import UserModel
+import app.schemas.user as user_schema
 import app.settings as settings
 
 
