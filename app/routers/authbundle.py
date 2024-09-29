@@ -58,7 +58,6 @@ async def authbundle_create(
         autbundle.keyname=keyfile.filename
         autbundle.keydata=content
 
-    lock = lock_db()
     engine = create_engine('sqlite:///db/authbundles.sqlite')
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
@@ -74,17 +73,5 @@ async def authbundle_create(
         )
     finally:
         session.close()
-        unlock_db(lock)
 
     return JSONResponse(content={"authbundle_id": authbundle_id})
-
-
-def lock_db():
-    fd = open("db/authbundles.sqlite", "a+")
-    fcntl.lockf(fd, fcntl.LOCK_EX)
-    return fd
-
-
-def unlock_db(fd):
-    fcntl.lockf(fd, fcntl.LOCK_UN)
-    fd.close()
