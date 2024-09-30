@@ -1,11 +1,13 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from sqlalchemy.orm import Session
 
 from app.routers.api import router as api_router
 from app.crud.users import load_first_user
-from app.dependencies import get_db
 from app.database_setup import SessionLocal, DefaultBase, AuthBase, engine
+
+# We load all DB models here, so Base classes can create all tables in lifespan
+import app.models.authbundle
+import app.models.user
 
 
 @asynccontextmanager

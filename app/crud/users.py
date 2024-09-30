@@ -1,11 +1,10 @@
+import os
+
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
 
-import os
-
 from app.models.user import UserModel
 import app.schemas.user as user_schema
-import app.settings as settings
 
 
 def get_user(db_session: Session, user_id: int):
