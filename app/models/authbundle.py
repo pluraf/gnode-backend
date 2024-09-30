@@ -1,4 +1,4 @@
-from app.database_setup import  AuthBase
+from app.database_setup import AuthBase
 from sqlalchemy import Column, String, LargeBinary
 
 

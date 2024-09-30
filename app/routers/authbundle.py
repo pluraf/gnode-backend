@@ -4,12 +4,13 @@ from fastapi import APIRouter, Form, File, Depends, UploadFile, HTTPException, s
 from fastapi.responses import JSONResponse
 from typing import Optional
 
-from sqlalchemy import exc, create_engine
+from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
 
 import app.schemas.autbundle as autbundle_schema
 from app.routers import authentication
 from app.models.authbundle import Authbundle
+from app.database_setup import auth_engine
 
 
 router = APIRouter()
@@ -43,8 +44,7 @@ async def authbundle_create(
         autbundle.keyname=keyfile.filename
         autbundle.keydata=content
 
-    engine = create_engine('sqlite:///db/authbundles.sqlite')
-    session = sessionmaker(bind=engine)()
+    session = sessionmaker(bind=auth_engine)()
     session.add(autbundle)
     try:
         session.commit()
@@ -63,8 +63,7 @@ async def authbundle_create(
 
 @router.get("/", response_model=list[autbundle_schema.AuthbundleListResponse])
 async def authbundle_list(_: str = Depends(authentication.validate_jwt)):
-    engine = create_engine('sqlite:///db/authbundles.sqlite')
-    session = sessionmaker(bind=engine)()
+    session = sessionmaker(bind=auth_engine)()
     try:
         return session.query(Authbundle).all()
     finally:
