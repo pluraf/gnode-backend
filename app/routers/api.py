@@ -5,6 +5,7 @@ from app.routers import users
 from app.routers import authentication
 from app.routers import authbundle
 from app.routers import settings
+from app.routers import version
 
 import app.settings as app_settings
 
@@ -20,3 +21,4 @@ router.include_router(users.router, prefix="/user")
 router.include_router(authentication.router, prefix=app_settings.TOKEN_AUTH_URL)
 router.include_router(authbundle.router, prefix="/authbundle")
 router.include_router(settings.router, prefix="/settings")
+router.include_router(version.router, prefix="/api/version")
