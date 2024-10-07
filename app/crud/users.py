@@ -40,8 +40,8 @@ def delete_user(db_session: Session, user_id: int):
 
 
 def load_first_user(db_session: Session):
-    first_username = os.getenv("GNODE_FIRST_USER_NAME")
-    first_user_pswd = os.getenv("GNODE_FIRST_USER_PSWD")
+    first_username = os.getenv("GNODE_DEFAULT_USERNAME")
+    first_user_pswd = os.getenv("GNODE_DEFAULT_PASSWORD")
     user = get_user_by_username(db_session, first_username)
     if user is None:
         user = user_schema.UserCreate(
@@ -51,6 +51,6 @@ def load_first_user(db_session: Session):
     return
 
 def get_first_user_id(db_session: Session):
-    first_username = os.getenv("GNODE_FIRST_USER_NAME")
+    first_username = os.getenv("GNODE_DEFAULT_USERNAME")
     user = get_user_by_username(db_session, first_username)
     return user.id

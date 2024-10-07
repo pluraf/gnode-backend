@@ -31,7 +31,7 @@ router = APIRouter()
 
 
 def load_private_key_from_file():
-    private_key_path = os.getenv("GNODE_PRIVATE_KEY_PASS")
+    private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
     if not private_key_path:
         raise RuntimeError()
 
@@ -43,7 +43,7 @@ def load_private_key_from_file():
 
 
 def load_public_key_from_file():
-    public_key_path = os.getenv("GNODE_PUBLIC_KEY_PASS")
+    public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
     if not public_key_path:
         raise RuntimeError()
 
