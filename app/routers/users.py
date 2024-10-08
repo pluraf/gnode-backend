@@ -24,7 +24,12 @@ def create_user(
             status_code=400, detail="Only admin users are authorized to create new users"
         )
 
-    return user_crud.create_user(db_session=db_session, user=user)
+    try:
+        return user_crud.create_user(db_session=db_session, user=user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500)
 
 
 @router.get("/", response_model=list[user_schema.User])
