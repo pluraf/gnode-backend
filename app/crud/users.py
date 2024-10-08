@@ -20,6 +20,11 @@ def get_users(db_session: Session, skip: int = 0, limit: int = 100):
 
 
 def create_user(db_session: Session, user: user_schema.UserCreate):
+    # Check is user exists
+    existing_user = get_user_by_username(db_session, user.username)
+    if existing_user:
+        raise ValueError("Username already exist")
+
     hashed_password = bcrypt.hash(user.password)
     db_user = UserModel(
         username=user.username, hashed_password=hashed_password, is_admin=user.is_admin
