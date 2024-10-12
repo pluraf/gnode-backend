@@ -5,63 +5,49 @@ from typing import Dict
 router = APIRouter()
 context = zmq.Context()  # Should be terminated when application exits
 
+
 def get_version_from_zmq(address: str) -> str:
     socket = context.socket(zmq.REQ)
     try:
         socket.connect(address)
         socket.send_string("api_version")
-        socket.setsockopt(zmq.RCVTIMEO, 5000)
+        socket.setsockopt(zmq.RCVTIMEO, 1000)
         version = socket.recv_string()
     except zmq.error.ZMQError as e:
-        print(f"Error retrieving version from {address}: {e}")
-        return "unknown"
+        version = "xxxx"
     finally:
         socket.close()
     return version
 
 
-def parse_api_versions() -> Dict[str, str]:
-    api_versions = {}
-    try:
-        api_versions["M-BROKER-C"] = get_version_from_zmq("ipc:///tmp/mqbc-zmq.sock")
-    except Exception as e:
-        api_versions["M-BROKER-C"] = "unknown"
-        print(f"Failed to retrieve version for M-BROKER-C: {e}")
-    try:
-        api_versions["M2E-BRIDGE"] = get_version_from_zmq("ipc:///tmp/m2eb-zmq.sock")
-    except Exception as e:
-        api_versions["M2E-BRIDGE"] = "unknown"
-        print(f"Failed to retrieve version for M2E-BRIDGE: {e}")
-    return api_versions
+def get_mqbc_api_version() -> str:
+    return get_version_from_zmq("ipc:///tmp/mqbc-zmq.sock")
 
 
-def read_version_from_file(file_path: str) -> Dict[str, str]:
-    api_versions = {}
-
-    with open(file_path, "r") as file:
-        for line in file:
-            api_name, version = line.split("=")
-            api_versions[api_name.strip()] = version.strip()
-    return api_versions
+def get_m2eb_api_version() -> str:
+    return get_version_from_zmq("ipc:///tmp/m2eb-zmq.sock")
 
 
-def read_serial_number_from_file(file_path: str):
-    with open(file_path, "r") as file:
+def get_serial_number() -> str:
+    with open("/run/gnode/serial_number", "r") as api_file:
+        return api_file.read()
+
+
+def get_gnode_api_version():
+    with open("./api_version.txt", "r") as file:
         serial_number = file.read()
     return serial_number
 
 
-@router.get("/")
+@router.get("")
 async def api_version_get():
-    gnode_api_version = read_version_from_file("./api_versions.txt")
-    mbc_m2eb_api_versions = parse_api_versions()
-    api_versions = {**gnode_api_version, **mbc_m2eb_api_versions}
+    api_version = "{}.{}.{}".format(
+        get_gnode_api_version(),
+        get_m2eb_api_version(),
+        get_mqbc_api_version()
+    )
 
-    serial_number = read_serial_number_from_file("./serial_number.txt")
-
-    rv = {
-        "API VERSIONS" : api_versions,
-        "SERIAL_NUMBER" : serial_number
+    return {
+        "api_version" : api_version,
+        "serial_number" : get_serial_number()
     }
-    
-    return rv
