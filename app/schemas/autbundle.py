@@ -7,3 +7,10 @@ class AuthbundleListResponse(BaseModel):
     connector_type: str
     auth_type: str
     description: Optional[str] = ""
+
+class AuthbundleDetailsResponse(BaseModel):
+    authbundle_id: str
+    connector_type: str
+    auth_type: str
+    description: Optional[str] = ""
+    username: Optional[str] = None
