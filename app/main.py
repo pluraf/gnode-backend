@@ -9,6 +9,8 @@ from app.database_setup import SessionLocal, DefaultBase, AuthBase, default_engi
 import app.models.authbundle
 import app.models.user
 
+from app.zmq_setup import zmq_context
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,9 +20,10 @@ async def lifespan(app: FastAPI):
     try:
         # Load first user to DB
         load_first_user(db_session)
+        db_session.close()
         yield
     finally:
-        db_session.close()
+        zmq_context.term()
     # Clean up
 
 

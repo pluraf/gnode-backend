@@ -1,13 +1,16 @@
-from fastapi import APIRouter
 import zmq
+
+from fastapi import APIRouter
 from typing import Dict
 
+from app.zmq_setup import zmq_context
+
+
 router = APIRouter()
-context = zmq.Context()  # Should be terminated when application exits
 
 
 def get_version_from_zmq(address: str) -> str:
-    socket = context.socket(zmq.REQ)
+    socket = zmq_context.socket(zmq.REQ)
     try:
         socket.connect(address)
         socket.send_string("api_version")
