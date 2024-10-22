@@ -83,15 +83,23 @@ def set_network_settings(user_input):
     connection_type = user_input.get("TYPE")
     ssid = user_input.get("SSID")
     password = user_input.get("PASSWORD")
+    password_needed = False
     if  (connection_type is None) or connection_type != 'wifi' or ssid is None:
-        raise HTTPException(status_code = 422, detail = '''Only wifi settings are currently supported by network settings
-        Input should be of format {TPE:wifi, SSID: , PASSWORD: } ''')
+        raise HTTPException(status_code = 422, detail = "Only wifi settings are currently supported by network settings. " +
+        "Input should be of format {TYPE:wifi, SSID: , PASSWORD: }. Password is optional")
+    connections = get_available_wifi()
+    seĺected_connection = [connection for connection in connections if connection['SSID'] == ssid]
+    if len(seĺected_connection) == 0 :
+        raise HTTPException(status_code = 404, detail = "Network settings: Given ssid is invalid")
+    password_needed = seĺected_connection[0]["SECURITY"] != ""
     if password is None:
+        if password_needed:
+            raise HTTPException(status_code = 422, detail = "Network settings: Given ssid requires a password")
         command = ['nmcli', 'device', 'wifi', 'connect', ssid]
     else:
         command = ['nmcli', 'device', 'wifi', 'connect', ssid, 'password', password]
     try:
-        comm_response = run_command(command)
+        run_command(command)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = "Could not change network settings")
     
