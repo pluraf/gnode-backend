@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from typing import Any
 
 from app.routers import authentication
-from app.components import gnode_time
+from app.components import gnode_time, network_connections
 from app.zmq_setup import zmq_context
 
 router = APIRouter()
@@ -24,7 +24,9 @@ async def settings_get(_: str = Depends(authentication.validate_jwt)):
         message = b"\x00"
     finally:
         socket.close()
-    return JSONResponse(content={"allow_anonymous": bool(message[0])})
+    response = {"allow_anonymous": bool(message[0])}
+    response["network settings"] = network_connections.get_netwok_settings()
+    return JSONResponse(content=response)
 
 
 @router.put("/")
@@ -46,5 +48,9 @@ async def settings_put(settings: dict[str, Any], _: str = Depends(authentication
     v = settings.get("gnode_time")
     if v is not None:
         gnode_time.set_gnode_time(v)
+
+    v = settings.get("network_settings")
+    if v is not None:
+        network_connections.set_network_settings(v)
 
     return Response(status_code=200)
