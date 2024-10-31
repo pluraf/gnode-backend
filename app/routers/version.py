@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from typing import Dict
 
 from app.zmq_setup import zmq_context
-
+import app.settings as app_settings
 
 router = APIRouter()
 
@@ -24,11 +24,11 @@ def get_version_from_zmq(address: str) -> str:
 
 
 def get_mqbc_api_version() -> str:
-    return get_version_from_zmq("ipc:///tmp/mqbc-zmq.sock")
+    return get_version_from_zmq(app_settings.ZMQ_MQBC_ENDPOINT)
 
 
 def get_m2eb_api_version() -> str:
-    return get_version_from_zmq("ipc:///tmp/m2eb-zmq.sock")
+    return get_version_from_zmq(app_settings.ZMQ_M2EB_ENDPOINT)
 
 
 def get_serial_number() -> str:

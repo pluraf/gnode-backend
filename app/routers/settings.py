@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from app.routers import authentication
 from app.components import gnode_time, network_connections
 from app.zmq_setup import zmq_context
+import app.settings as app_settings
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ router = APIRouter()
 @router.get("/")
 async def settings_get(_: str = Depends(authentication.validate_jwt)):
     socket = zmq_context.socket(zmq.REQ)
-    socket.connect("ipc:///tmp/mqbc-zmq.sock")
+    socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
     socket.setsockopt(zmq.RCVTIMEO, 1000)
 
     response = {}
@@ -46,7 +47,7 @@ async def settings_get(_: str = Depends(authentication.validate_jwt)):
 @router.put("/")
 async def settings_put(settings: dict[str, Any], _: str = Depends(authentication.validate_jwt)):
     socket = zmq_context.socket(zmq.REQ)
-    socket.connect("ipc:///tmp/mqbc-zmq.sock")
+    socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
     socket.setsockopt(zmq.RCVTIMEO, 1000)
 
     v = settings.get("allow_anonymous")
