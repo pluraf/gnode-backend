@@ -76,6 +76,15 @@ async def conditionally_authenticate(request: Request):
         return
 
 
+def check_authentication():
+    is_authentication_required = authentication_req.get_authentication_required()
+    if not is_authentication_required:
+        raise HTTPException(
+            status_code=status.HTTP_301_MOVED_PERMANENTLY,
+            detail="Authentication is disabled; this endpoint is not available."
+        )
+
+
 def authenticate_user(db_session, username: str, password: str):
     try:
         user = user_schema.UserAuth.model_validate(

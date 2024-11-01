@@ -9,7 +9,9 @@ from app.dependencies import get_db
 from app.routers import authentication
 
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(authentication.check_authentication)]
+)
 
 
 @router.post("/", response_model=user_schema.User)
