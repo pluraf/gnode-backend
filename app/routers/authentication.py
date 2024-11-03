@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, Body, Form, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Body, Form, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -15,7 +15,7 @@ import app.crud.users as user_crud
 import app.schemas.user as user_schema
 from app.dependencies import get_db
 
-from app.components import authentication_req
+from app.components.settings import Settings
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
@@ -67,18 +67,15 @@ def validate_jwt(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 
-async def conditionally_authenticate(request: Request):
-    is_authentication_required = authentication_req.get_authentication_required()
-    if is_authentication_required:
+async def authenticate(request: Request):
+    return
+    if Settings.authentication:
         token = await oauth2_scheme(request)
         return validate_jwt(token)
-    else:
-        return
 
 
-def check_authentication():
-    is_authentication_required = authentication_req.get_authentication_required()
-    if not is_authentication_required:
+def authentication_status():
+    if not Settings.authentication:
         raise HTTPException(
             status_code=status.HTTP_301_MOVED_PERMANENTLY,
             detail="Authentication is disabled; this endpoint is not available."
@@ -120,14 +117,10 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
 @router.post("/")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db_session: Session = Depends(get_db),
+    db_session: Session = Depends(get_db)
 ) -> Token:
-    is_authentication_required = authentication_req.get_authentication_required()
-    if not is_authentication_required:
-        raise HTTPException(
-            status_code=status.HTTP_204_NO_CONTENT,
-            detail="Authentication is not supported"
-        )
+    if not Settings.authentication:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     user = authenticate_user(db_session, form_data.username, form_data.password)
     if not user:

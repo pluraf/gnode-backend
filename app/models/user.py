@@ -4,7 +4,7 @@ from app.database_setup import DefaultBase
 
 
 class UserModel(DefaultBase):
-    __tablename__ = "gnode_users"
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)

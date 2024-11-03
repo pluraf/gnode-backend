@@ -1,6 +1,6 @@
 import zmq
 
-from fastapi import APIRouter, Response, Depends
+from fastapi import APIRouter, Response, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
 from typing import Any
 from datetime import datetime, timezone
@@ -8,17 +8,18 @@ from zoneinfo import ZoneInfo
 
 from app.routers import authentication
 from app.components import gnode_time
-from app.components import authentication_req
+from app.components.settings import Settings
 from app.zmq_setup import zmq_context
 
 router = APIRouter()
 
 
 @router.get("/")
-async def settings_get(_: str = Depends(authentication.conditionally_authenticate)):
+async def settings_get(_: str = Depends(authentication.authenticate)):
     socket = zmq_context.socket(zmq.REQ)
-    socket.connect("ipc:///tmp/mqbc-zmq.sock")
     socket.setsockopt(zmq.RCVTIMEO, 1000)
+    socket.setsockopt(zmq.LINGER, 0)
+    socket.connect("ipc:///tmp/mqbc-zmq.sock")
 
     response = {}
 
@@ -41,35 +42,58 @@ async def settings_get(_: str = Depends(authentication.conditionally_authenticat
                         "timezone": current_timezone
                         }
 
-
-    response["authentication_required"] = authentication_req.get_authentication_required()
+    settings = Settings()
+    response["authentication"] = settings.authentication
+    response["gcloud"] = settings.gcloud
 
     return JSONResponse(content=response)
 
 
 @router.put("/")
-async def settings_put(settings: dict[str, Any], _: str = Depends(authentication.conditionally_authenticate)):
-    socket = zmq_context.socket(zmq.REQ)
-    socket.connect("ipc:///tmp/mqbc-zmq.sock")
-    socket.setsockopt(zmq.RCVTIMEO, 1000)
+async def settings_put(settings: dict[str, Any], _: str = Depends(authentication.authenticate)):
+    # TODO: Move each block to a dedicated function (class?)
+    last_exc = None
+    try:
+        v = settings.get("allow_anonymous")
+        if v is not None:
+            socket = zmq_context.socket(zmq.REQ)
+            socket.setsockopt(zmq.RCVTIMEO, 1000)
+            socket.setsockopt(zmq.LINGER, 0)
+            socket.connect("ipc:///tmp/mqbc-zmq.sock")
+            try:
+                socket.send(b'\x01' if v else b'\x00')
+                socket.recv()
+            except zmq.error.ZMQError:
+                pass
+            finally:
+                socket.close()
+    except Exception as e:
+        last_exc = e
 
-    v = settings.get("allow_anonymous")
-    if v is not None:
-        try:
-            socket.send(b'\x01' if v else b'\x00')
-            socket.recv()
-        except zmq.error.ZMQError:
-            pass
-        finally:
-            socket.close()
+    try:
+        v = settings.get("gnode_time")
+        if v is not None:
+            gnode_time.set_gnode_time(v)
+    except Exception as e:
+        last_exc = e
 
-    v = settings.get("gnode_time")
-    if v is not None:
-        gnode_time.set_gnode_time(v)
+    try:
+        v = settings.get("authentication")
+        if v is not None:
+            Settings().authentication = v
+    except Exception as e:
+        last_exc = e
 
-    v = settings.get("authentication_required")
-    if v is not None:
-        authentication_req.update_authentication_required(v)
+    try:
+        v = settings.get("gcloud")
+        if v is not None:
+            Settings().gcloud = v
+    except Exception as e:
+        last_exc = e
 
-
+    if last_exc is not None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(last_exc),
+        )
     return Response(status_code=200)
