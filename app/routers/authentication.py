@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, Body, Form, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Form, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,8 @@ from datetime import datetime, timedelta, timezone
 import app.crud.users as user_crud
 import app.schemas.user as user_schema
 from app.dependencies import get_db
+
+from app.components.settings import Settings
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
@@ -65,6 +67,20 @@ def validate_jwt(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 
+async def authenticate(request: Request):
+    if Settings().authentication:
+        token = await oauth2_scheme(request)
+        return validate_jwt(token)
+
+
+def authentication_status():
+    if not Settings().authentication:
+        raise HTTPException(
+            status_code=status.HTTP_301_MOVED_PERMANENTLY,
+            detail="Authentication is disabled; this endpoint is not available."
+        )
+
+
 def authenticate_user(db_session, username: str, password: str):
     try:
         user = user_schema.UserAuth.model_validate(
@@ -100,8 +116,11 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
 @router.post("/")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db_session: Session = Depends(get_db),
+    db_session: Session = Depends(get_db)
 ) -> Token:
+    if not Settings().authentication:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
     user = authenticate_user(db_session, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

@@ -25,7 +25,7 @@ async def authbundle_create(
     password: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     keyfile: Optional[UploadFile] = File(None),
-    _: str = Depends(authentication.validate_jwt)
+    _: str = Depends(authentication.authenticate)
 ):
     if not authbundle_id:
         authbundle_id = uuid.uuid4().hex
@@ -62,7 +62,7 @@ async def authbundle_create(
 
 
 @router.get("/", response_model=list[autbundle_schema.AuthbundleListResponse])
-async def authbundle_list(_: str = Depends(authentication.validate_jwt)):
+async def authbundle_list(_: str = Depends(authentication.authenticate)):
     session = sessionmaker(bind=auth_engine)()
     try:
         return session.query(Authbundle).all()
@@ -73,7 +73,7 @@ async def authbundle_list(_: str = Depends(authentication.validate_jwt)):
 @router.delete("/", response_model=dict)
 async def authbundle_delete(
     authbundle_ids: List[str],
-    _: str = Depends(authentication.validate_jwt)
+    _: str = Depends(authentication.authenticate)
 ):
     session = sessionmaker(bind=auth_engine)()
     deleted = []
@@ -104,14 +104,14 @@ async def authbundle_edit(
     password: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     keyfile: Optional[UploadFile] = File(None),
-    _: str = Depends(authentication.validate_jwt)
+    _: str = Depends(authentication.authenticate)
 ):
     session = sessionmaker(bind=auth_engine)()
 
     authbundle = session.query(Authbundle).filter(Authbundle.authbundle_id == authbundle_id).first()
     if not authbundle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Authentication bundle not found"
         )
 
@@ -143,14 +143,14 @@ async def authbundle_edit(
 @router.get("/{authbundle_id}", response_model=autbundle_schema.AuthbundleDetailsResponse)
 async def authbundle_details(
     authbundle_id: str,
-    _: str = Depends(authentication.validate_jwt)
+    _: str = Depends(authentication.authenticate)
 ):
     session = sessionmaker(bind=auth_engine)()
 
     authbundle = session.query(Authbundle).filter(Authbundle.authbundle_id == authbundle_id).first()
     if not authbundle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Authentication bundle not found"
         )
 
