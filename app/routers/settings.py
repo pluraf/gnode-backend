@@ -41,8 +41,11 @@ async def settings_get(_: str = Depends(authentication.authenticate)):
                         "time": iso_8601_utc,
                         "timezone": current_timezone
                         }
-    response["network settings"] = network_connections.get_netwok_settings()
 
+    try:
+        response["network settings"] = network_connections.get_netwok_settings()
+    except:
+        response["network settings"] = {}
 
     settings = Settings()
     response["authentication"] = settings.authentication
