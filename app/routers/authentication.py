@@ -118,7 +118,7 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db_session: Session = Depends(get_db)
 ) -> Token:
-    if not Settings.authentication:
+    if not Settings().authentication:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     user = authenticate_user(db_session, form_data.username, form_data.password)
