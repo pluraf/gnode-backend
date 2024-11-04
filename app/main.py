@@ -8,6 +8,7 @@ from app.database_setup import SessionLocal, DefaultBase, AuthBase, default_engi
 # We load all DB models here, so Base classes can create all tables in lifespan
 import app.models.authbundle
 import app.models.user
+import app.models.settings
 
 from app.zmq_setup import zmq_context
 
@@ -23,8 +24,9 @@ async def lifespan(app: FastAPI):
         db_session.close()
         yield
     finally:
+        # Clean up
         zmq_context.term()
-    # Clean up
+
 
 
 def get_application() -> FastAPI:

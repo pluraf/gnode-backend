@@ -11,10 +11,11 @@ router = APIRouter()
 
 def get_version_from_zmq(address: str) -> str:
     socket = zmq_context.socket(zmq.REQ)
+    socket.setsockopt(zmq.RCVTIMEO, 1000)
+    socket.setsockopt(zmq.LINGER, 0)
     try:
         socket.connect(address)
         socket.send_string("api_version")
-        socket.setsockopt(zmq.RCVTIMEO, 1000)
         version = socket.recv_string()
     except zmq.error.ZMQError as e:
         version = "xxxx"
