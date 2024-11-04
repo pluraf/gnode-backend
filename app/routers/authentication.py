@@ -68,14 +68,13 @@ def validate_jwt(token: str = Depends(oauth2_scheme)):
 
 
 async def authenticate(request: Request):
-    return
-    if Settings.authentication:
+    if Settings().authentication:
         token = await oauth2_scheme(request)
         return validate_jwt(token)
 
 
 def authentication_status():
-    if not Settings.authentication:
+    if not Settings().authentication:
         raise HTTPException(
             status_code=status.HTTP_301_MOVED_PERMANENTLY,
             detail="Authentication is disabled; this endpoint is not available."
