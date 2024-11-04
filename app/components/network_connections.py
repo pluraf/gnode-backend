@@ -35,11 +35,9 @@ def netmask_to_cidr( netmask):
 
 def cidr_to_ip_and_netmask(cidr):
     # Parse the CIDR notation
-    network = ipaddress.IPv4Network(cidr, strict=False)
+    ipint = ipaddress.IPv4Interface(cidr)
     # Extract the IP address and netmask
-    ip_address = str(network.network_address)
-    netmask = str(network.netmask)
-    return ip_address, netmask
+    return str(ipint.ip), str(ipint.network.netmask)
 
 def is_valid_ipv4_address(ip):
     try:
