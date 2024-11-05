@@ -36,11 +36,9 @@ def netmask_to_cidr( netmask):
 
 def cidr_to_ip_and_netmask(cidr):
     # Parse the CIDR notation
-    network = ipaddress.IPv4Network(cidr, strict=False)
+    ipint = ipaddress.IPv4Interface(cidr)
     # Extract the IP address and netmask
-    ip_address = str(network.network_address)
-    netmask = str(network.netmask)
-    return ip_address, netmask
+    return str(ipint.ip), str(ipint.network.netmask)
 
 def is_valid_ipv4_address(ip):
     try:
@@ -97,7 +95,7 @@ def get_ipv4_settings(device_name):
     ipv4_settings['address'], ipv4_settings['netmask']  = \
         cidr_to_ip_and_netmask(command_resp[0]['ip4.address[1]'])
     ipv4_settings['gateway'] = command_resp[0]['ip4.gateway']
-    ipv4_settings['dns'] = command_resp[0]['ip4.dns[1]']
+    ipv4_settings['dns'] = command_resp[0].get('ip4.dns[1]')
     return ipv4_settings
 
 def get_available_wifi():
@@ -139,15 +137,15 @@ def get_available_ethernet():
     comm_response = run_command(command)
     connections = get_objects_from_multiline_output(comm_response)
     relevant_connections = [connection for connection in connections if connection['type'] == 'ethernet']
-    # To get more details about specific connection, command 'nmcli connections show <conn name>' 
-    # can be used 
+    # To get more details about specific connection, command 'nmcli connections show <conn name>'
+    # can be used
     return relevant_connections
 
 def get_current_active_connections(types = []):
     # command: nmcli -m multiline -f 'NAME,TYPE,DEVICE' connection show --active
     # allowed fields: NAME,UUID,TYPE,TIMESTAMP,TIMESTAMP-REAL,AUTOCONNECT,AUTOCONNECT-PRIORITY,
     # READONLY,DBUS-PATH,ACTIVE,DEVICE,STATE,ACTIVE-PATH,SLAVE,FILENAME
-    # nmcli connection type allowed values : adsl, bond, bond-slave, bridge, bridge-slave, 
+    # nmcli connection type allowed values : adsl, bond, bond-slave, bridge, bridge-slave,
     # bluetooth, cdma, ethernet, gsm, infiniband, olpc-mesh, team, team-slave, vlan, wifi, wimax.
     relevant_types = []
     if len(types) == 0:
@@ -207,7 +205,7 @@ def set_ipv4_settings(ipv4_method, ipv4_settings, connection_type):
             run_command(command)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = "Could not set network settings!")
-    
+
 
 def set_network_settings(user_input):
     # Accepts input of format:
@@ -241,7 +239,7 @@ def set_network_settings(user_input):
     current_wifi_connection = get_current_active_connections(['wifi'])
 
     #connect to the new wifi network if not conneted
-    if len(current_wifi_connection) == 0 or current_wifi_connection[0]['name'] != ssid : 
+    if len(current_wifi_connection) == 0 or current_wifi_connection[0]['name'] != ssid :
         password_needed = seĺected_connection[0]["security"] != ""
         if password is None:
             if password_needed:
@@ -253,7 +251,7 @@ def set_network_settings(user_input):
             run_command(command)
         except subprocess.CalledProcessError as e:
             raise HTTPException(status_code = 500, detail = "Could not connect to given network")
-    
+
     # set ipv4 settings if input is valid
     if ipv4_method == 'auto' or (ipv4_method == "manual" and (ipv4_settings is not None) and \
             isinstance(ipv4_settings, dict)):
@@ -262,8 +260,3 @@ def set_network_settings(user_input):
         if ipv4_method is not None :
             raise HTTPException(status_code = 422, detail = "ipv4_method should be auto or manual." +
             "If ipv4_method is manual, ipv4_settings object should be present.")
-
-
-
-
-
