@@ -4,7 +4,7 @@ import subprocess
 import ipaddress
 import json
 
-from app.components.utils import run_command
+from app.utils import run_command
 
 def get_objects_from_multiline_output(command_response):
     element_list = []
