@@ -90,7 +90,7 @@ def get_ipv4_settings(device_name):
     ipv4_settings = {}
     command = ['nmcli', 'device', 'show', device_name]
     command_resp = get_objects_from_multiline_output(run_command(command))
-    ipv4_settings['address'], ipv4_settings['netmask']  = \
+    ipv4_settings['ipv4'], ipv4_settings['netmask']  = \
         cidr_to_ip_and_netmask(command_resp[0]['ip4.address[1]'])
     ipv4_settings['gateway'] = command_resp[0]['ip4.gateway']
     ipv4_settings['dns'] = command_resp[0].get('ip4.dns[1]')
@@ -116,7 +116,7 @@ def get_default_route():
 
 def get_network_status():
     status = {}
-    status["address"] = "-"
+    status["ipv4"] = "-"
     status["netmask"] = "-"
     status["gateway"] = "-"
     status["dns"] = "-"

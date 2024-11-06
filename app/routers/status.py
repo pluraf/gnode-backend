@@ -69,8 +69,10 @@ def get_service_status(service_name):
 @router.get("")
 async def status_get(_: str = Depends(authentication.authenticate)):
     response = {}
-    response["mqbc"] = get_service_status("mqbc.service")
-    response["m2eb"] = get_service_status("m2eb.service")
+    response["service"] = {
+        "mqbc": get_service_status("mqbc.service"),
+        "m2eb": get_service_status("m2eb.service"),
+        "gcloud_client": get_systemd_service_status("gnode-cloud-client.service")
+    }
     response["network"] = network_connections.get_network_status()
-    response["gcloud_client"] = get_systemd_service_status("gnode-cloud-client.service")
     return JSONResponse(content=response)
