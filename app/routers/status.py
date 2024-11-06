@@ -66,7 +66,7 @@ def get_service_status(service_name):
         return get_supervisor_service_status(service_name)
 
 
-@router.get("/")
+@router.get("")
 async def status_get(_: str = Depends(authentication.authenticate)):
     response = {}
     response["mqbc"] = get_service_status("mqbc.service")
