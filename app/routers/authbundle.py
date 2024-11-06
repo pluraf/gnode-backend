@@ -19,7 +19,7 @@ router = APIRouter()
 @router.post("/")
 async def authbundle_create(
     authbundle_id: Optional[str] = Form(None),
-    connector_type: str = Form(...),
+    service_type: str = Form(...),
     auth_type: str = Form(...),
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
@@ -32,7 +32,7 @@ async def authbundle_create(
 
     autbundle = Authbundle(
         authbundle_id=authbundle_id,
-        connector_type=connector_type,
+        service_type=service_type,
         auth_type=auth_type,
         description=description,
         username=username,

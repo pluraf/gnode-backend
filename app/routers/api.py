@@ -6,6 +6,7 @@ from app.routers import authentication
 from app.routers import authbundle
 from app.routers import settings, status
 from app.routers import version
+from app.routers import info
 
 import app.settings as app_settings
 
@@ -23,3 +24,4 @@ router.include_router(authbundle.router, prefix="/authbundle")
 router.include_router(settings.router, prefix="/settings")
 router.include_router(version.router, prefix="/version")
 router.include_router(status.router, prefix="/status")
+router.include_router(info.router, prefix="/info")
