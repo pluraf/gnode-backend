@@ -1,17 +1,11 @@
 from fastapi import APIRouter
 
 from app.routers import version
-
-import os
+from app.utils import get_mode
 
 
 router = APIRouter()
 
-def get_mode():
-    if os.path.exists("/.dockerenv"):
-        return "virtual"
-    else:
-        return "physical"
 
 @router.get("/")
 async def get_info():

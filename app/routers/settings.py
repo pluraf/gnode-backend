@@ -10,6 +10,7 @@ from app.routers import authentication
 from app.components import gnode_time, network_connections
 from app.components.settings import Settings
 from app.zmq_setup import zmq_context
+import app.settings as app_settings
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ async def settings_get(_: str = Depends(authentication.authenticate)):
     socket = zmq_context.socket(zmq.REQ)
     socket.setsockopt(zmq.RCVTIMEO, 1000)
     socket.setsockopt(zmq.LINGER, 0)
-    socket.connect("ipc:///tmp/mqbc-zmq.sock")
+    socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
 
     response = {}
 
@@ -64,7 +65,7 @@ async def settings_put(settings: dict[str, Any], _: str = Depends(authentication
             socket = zmq_context.socket(zmq.REQ)
             socket.setsockopt(zmq.RCVTIMEO, 1000)
             socket.setsockopt(zmq.LINGER, 0)
-            socket.connect("ipc:///tmp/mqbc-zmq.sock")
+            socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
             try:
                 socket.send(b'\x01' if v else b'\x00')
                 socket.recv()

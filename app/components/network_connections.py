@@ -2,10 +2,9 @@ from fastapi import HTTPException
 
 import subprocess
 import ipaddress
+import json
 
-def run_command(command, shell=False):
-    result = subprocess.run(command, check=True, text=True, capture_output=True, shell=shell)
-    return result.stdout.strip()
+from app.utils import run_command
 
 def get_objects_from_multiline_output(command_response):
     element_list = []
@@ -104,6 +103,31 @@ def get_available_wifi():
     command = ['nmcli', '-m', 'multiline', '-f', 'SSID,SECURITY,DEVICE,SIGNAL,RATE', 'device', 'wifi', 'list']
     comm_response = run_command(command)
     return get_objects_from_multiline_output(comm_response)
+
+def get_default_route():
+    #command: ip -j route
+    command = ['ip', '-j', 'route']
+    comm_response = run_command(command)
+    resp_json = json.loads(comm_response)
+    for route in resp_json:
+        if route["dst"] == "default":
+            return route
+    return []
+
+def get_network_status():
+    status = {}
+    status["address"] = "-"
+    status["netmask"] = "-"
+    status["gateway"] = "-"
+    status["dns"] = "-"
+    try:
+        def_route = get_default_route()
+        if def_route == []:
+            return status
+        curr_device = def_route["dev"]
+        return get_ipv4_settings(curr_device)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code = 500, detail = "Could not get network status!")
 
 def get_available_ethernet():
     # command: nmcli -m multiline -f 'NAME,TYPE,DEVICE' connection show
