@@ -4,7 +4,7 @@ import subprocess
 import ipaddress
 import json
 
-from app.utils import run_command
+from app.utils import run_command, run_privileged_command
 
 def get_objects_from_multiline_output(command_response):
     element_list = []
@@ -81,7 +81,7 @@ def validate_ipv4_settings(ipv4_settings):
 def get_ipv4_method(connection_name):
     # command : nmcli connection show <connection-name> | grep ipv4.method
     command = 'nmcli connection show "' + connection_name + '" | grep ipv4.method'
-    command_resp = run_command(command, True)
+    command_resp = run_privileged_command(command, True)
     command_resp = get_objects_from_multiline_output(command_resp)
     return command_resp[0]['ipv4.method']
 
@@ -89,19 +89,25 @@ def get_ipv4_settings(device_name):
     # command: nmcli device show <device_name>
     ipv4_settings = {}
     command = ['nmcli', 'device', 'show', device_name]
-    command_resp = get_objects_from_multiline_output(run_command(command))
-    ipv4_settings['ipv4'], ipv4_settings['netmask']  = \
-        cidr_to_ip_and_netmask(command_resp[0]['ip4.address[1]'])
+    command_resp = get_objects_from_multiline_output(run_privileged_command(command))
+    try:
+        ipv4_settings['address'], ipv4_settings['netmask']  = \
+            cidr_to_ip_and_netmask(command_resp[0]['ip4.address[1]'])
+    except KeyError:
+        pass  # IP address can be empty
     ipv4_settings['gateway'] = command_resp[0]['ip4.gateway']
     ipv4_settings['dns'] = command_resp[0].get('ip4.dns[1]')
     return ipv4_settings
+
+def get_wifi_state():
+    return run_command(["nmcli", "radio", "wifi"])
 
 def get_available_wifi():
     # command: nmcli -m multiline -f 'SSID,SECURITY,DEVICE,SIGNAL,RATE' device wifi list
     # allowed fields: NAME,SSID,SSID-HEX,BSSID,MODE,CHAN,FREQ,RATE,BANDWIDTH,SIGNAL,
     # BARS,SECURITY,WPA-FLAGS,RSN-FLAGS,DEVICE,ACTIVE,IN-USE,DBUS-PATH
     command = ['nmcli', '-m', 'multiline', '-f', 'SSID,SECURITY,DEVICE,SIGNAL,RATE', 'device', 'wifi', 'list']
-    comm_response = run_command(command)
+    comm_response = run_privileged_command(command)
     return get_objects_from_multiline_output(comm_response)
 
 def get_default_route():
@@ -132,7 +138,7 @@ def get_network_status():
 def get_available_ethernet():
     # command: nmcli -m multiline -f 'NAME,TYPE,DEVICE' connection show
     command = ['nmcli', '-m', 'multiline', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show']
-    comm_response = run_command(command)
+    comm_response = run_privileged_command(command)
     connections = get_objects_from_multiline_output(comm_response)
     relevant_connections = [connection for connection in connections if connection['type'] == 'ethernet']
     # To get more details about specific connection, command 'nmcli connections show <conn name>'
@@ -151,7 +157,7 @@ def get_current_active_connections(types = []):
     else:
         relevant_types = types
     command = ['nmcli', '-m', 'multiline', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active']
-    comm_response = run_command(command)
+    comm_response = run_privileged_command(command)
     connections = get_objects_from_multiline_output(comm_response)
     relevant_connections = [connection for connection in connections if connection['type'] in relevant_types]
     for connection in relevant_connections:
@@ -162,6 +168,7 @@ def get_current_active_connections(types = []):
 def get_netwok_settings():
     network_settings = {}
     try:
+        network_settings["wifi_state"] = get_wifi_state()
         network_settings["available_wifi"] = get_available_wifi()
         network_settings["available_ethernet"] = get_available_ethernet()
         network_settings["active_connections"] = get_current_active_connections()
@@ -174,36 +181,61 @@ def get_netwok_settings():
 
 def set_ipv4_settings(ipv4_method, ipv4_settings, connection_type):
     # current ipv4_settings and user given ipv4_settings match,
-    current_connection = get_current_active_connections( [connection_type] )
-    connection_name = current_connection[0]['name']
+    try:
+        current_connection = get_current_active_connections([connection_type])[0]
+    except IndexError:
+        raise HTTPException(
+            status_code = 400, detail = "No active connections"
+        )
+    connection_name = current_connection['name']
     commands = []
-    if ipv4_method == "auto" and current_connection[0]['ipv4_method'] == ipv4_method:
-        return
     if ipv4_method == "auto" :
-        commands.append (['nmcli', 'connection', 'modify', connection_name, 'ipv4.method', 'auto'])
+        commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.method', 'auto'])
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.gateway', ''])
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.dns', ''])
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.addresses', ''])
-    if ipv4_method == "manual" :
+    elif ipv4_method == "manual" :
         res, err = validate_ipv4_settings(ipv4_settings)
         if not res:
-            raise HTTPException(status_code = 422, detail = "Invalid ipv4 settings." + err)
-        else:
-            if ipv4_settings == current_connection[0]['ipv4_settings']:
-                return
-            cidr_address = ipv4_settings['address'] + '/' + netmask_to_cidr(ipv4_settings['netmask'])
-            commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.addresses', cidr_address])
-            commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.gateway', ipv4_settings['gateway']])
-            commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.dns', ipv4_settings['dns']])
-            commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.method', 'manual'])
+            raise HTTPException(status_code=422, detail="Invalid ipv4 settings."+err)
+#            commands.append(['ip', "addr", "flush", "dev", "wlan0"])
+        cidr_address = ipv4_settings['address'] + '/' + netmask_to_cidr(ipv4_settings['netmask'])
+        commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.addresses', cidr_address])
+        commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.gateway', ipv4_settings['gateway']])
+        commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.dns', ipv4_settings['dns']])
+        commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.method', 'manual'])
     commands.append(['nmcli', 'connection', 'down', connection_name])
     commands.append(['nmcli', 'connection', 'up', connection_name])
     try:
         for command in commands:
-            run_command(command)
+            run_privileged_command(command)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = "Could not set network settings!")
 
+def set_wifi_state(on):
+    return run_privileged_command(["nmcli", "radio", "wifi", "on" if on else "off"])
+
+def connect_wifi(ssid, password):
+    connections = get_available_wifi()
+    seĺected_connection = [connection for connection in connections if connection['ssid'] == ssid]
+    if len(seĺected_connection) == 0 :
+        raise HTTPException(status_code = 404, detail = "Network settings: Given ssid is invalid")
+    current_wifi_connection = get_current_active_connections(['wifi'])
+    #connect to the new wifi network if not conneted
+    if len(current_wifi_connection) == 0 or current_wifi_connection[0]['name'] != ssid :
+        password_needed = seĺected_connection[0]["security"] != ""
+        if not password:
+            if password_needed:
+                raise HTTPException(status_code = 422, detail = "Network settings: Given ssid requires a password")
+            command = ['nmcli', 'device', 'wifi', 'connect', ssid]
+        else:
+            command = ['nmcli', 'device', 'wifi', 'connect', ssid, 'password', password]
+        try:
+            run_privileged_command(command)
+        except subprocess.CalledProcessError as e:
+            if "property is invalid" in e.stderr:
+                raise HTTPException(status_code=400, detail="Password is invalid")
+            raise HTTPException(status_code = 500, detail = str(e))
 
 def set_network_settings(user_input):
     # Accepts input of format:
@@ -215,46 +247,21 @@ def set_network_settings(user_input):
     #    ipv4_settings:
     # }
     # command: nmcli device wifi connect <ssid> password <password>
+
     connection_type = user_input.get("type")
     ssid = user_input.get("ssid")
     password = user_input.get("password")
-    password_needed = False
     ipv4_method = user_input.get("ipv4_method")
-    ipv4_settings = user_input.get("ipv4_settings")
+    ipv4_settings = user_input.get("ipv4_settings", {})
 
-    allowed_attr = ['type', 'ssid', 'password', 'ipv4_method', 'ipv4_settings']
-    is_allowed_attr = all(key in allowed_attr for key in user_input.keys())
-    if  (connection_type is None) or connection_type != 'wifi' or ssid is None or (not is_allowed_attr):
-        raise HTTPException(status_code = 422, detail = "Only wifi settings are currently supported by network settings. " +
-        "Input should be of format {type:wifi, ssid: , password:, ipv4_method:, ipv4_settings:  }." +
-        "Password and ipv4 values are optional")
+    if "wifi_state" in user_input:
+        set_wifi_state(user_input["wifi_state"] == "enabled")
 
-    connections = get_available_wifi()
-    seĺected_connection = [connection for connection in connections if connection['ssid'] == ssid]
-    if len(seĺected_connection) == 0 :
-        raise HTTPException(status_code = 404, detail = "Network settings: Given ssid is invalid")
-
-    current_wifi_connection = get_current_active_connections(['wifi'])
-
-    #connect to the new wifi network if not conneted
-    if len(current_wifi_connection) == 0 or current_wifi_connection[0]['name'] != ssid :
-        password_needed = seĺected_connection[0]["security"] != ""
-        if password is None:
-            if password_needed:
-                raise HTTPException(status_code = 422, detail = "Network settings: Given ssid requires a password")
-            command = ['nmcli', 'device', 'wifi', 'connect', ssid]
-        else:
-            command = ['nmcli', 'device', 'wifi', 'connect', ssid, 'password', password]
-        try:
-            run_command(command)
-        except subprocess.CalledProcessError as e:
-            raise HTTPException(status_code = 500, detail = "Could not connect to given network")
+    if "ssid" in user_input:
+        connect_wifi(ssid, password)
 
     # set ipv4 settings if input is valid
-    if ipv4_method == 'auto' or (ipv4_method == "manual" and (ipv4_settings is not None) and \
-            isinstance(ipv4_settings, dict)):
+    if ipv4_method == 'auto' or ipv4_method == "manual":
         set_ipv4_settings(ipv4_method, ipv4_settings, connection_type)
-    else:
-        if ipv4_method is not None :
-            raise HTTPException(status_code = 422, detail = "ipv4_method should be auto or manual." +
-            "If ipv4_method is manual, ipv4_settings object should be present.")
+    elif ipv4_method is not None :
+        raise HTTPException(status_code = 422, detail = "ipv4_method should be auto or manual")
