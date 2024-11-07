@@ -2,6 +2,7 @@ from fastapi import HTTPException
 
 import subprocess
 
+from app.utils import get_mode
 
 def delete_old_ntp_servers():
     try:
@@ -20,7 +21,7 @@ def delete_old_ntp_servers():
         raise HTTPException(status_code = 500, detail = f"Failed to remove old servers: {e}")
 
 
-def set_time_manually(date_time, time_zone):
+def set_time_manually_physical(date_time, time_zone):
     try:
         subprocess.run(['sudo', 'timedatectl', 'set-ntp', 'false'], check=True)
         subprocess.run(['sudo', 'timedatectl', 'set-local-rtc', '0'], check=True)
@@ -31,7 +32,23 @@ def set_time_manually(date_time, time_zone):
         raise HTTPException(status_code = 500, detail = f"Failed to set system time: {e}")
 
 
-def set_time_automatically(ntp_server, time_zone):
+def set_time_manually_docker(date_time, time_zone):
+    try:
+        subprocess.run(['sudo', 'supervisorctl', 'stop', 'chronyd'], check=True)
+        subprocess.run(['ln', '-sf', f'/usr/share/zoneinfo/{time_zone}', '/etc/localtime'], check=True)
+        subprocess.run(['sudo', 'date', '--set', date_time], check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code = 500, detail = f"Failed to set system time: {e}")
+
+
+def set_time_manually(date_time, time_zone):
+    mode = get_mode()
+    if mode == "virtual":
+        return set_time_manually_docker(date_time, time_zone)
+    return set_time_manually_physical(date_time, time_zone)
+
+
+def set_time_automatically_physical(ntp_server, time_zone):
     try:
         subprocess.run(['sudo', 'timedatectl', 'set-local-rtc', '0'], check=True)
         subprocess.run(['sudo', 'timedatectl', 'set-timezone', time_zone], check=True)
@@ -41,6 +58,24 @@ def set_time_automatically(ntp_server, time_zone):
         subprocess.run(['sudo', 'chronyc', 'makestep'], check=True)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = f"Failed to sync system time: {e}")
+
+
+def set_time_automatically_docker(ntp_server, time_zone):
+    try:
+        subprocess.run(['ln', '-sf', f'/usr/share/zoneinfo/{time_zone}', '/etc/localtime'], check=True)
+        subprocess.run(['sudo', 'supervisorctl', 'restart', 'chronyd'], check=True)
+        delete_old_ntp_servers()
+        subprocess.run(['sudo', 'chronyc', 'add', 'server', ntp_server, 'iburst'], check=True)
+        subprocess.run(['sudo', 'chronyc', 'makestep'], check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code = 500, detail = f"Failed to sync system time: {e}")
+
+
+def set_time_automatically(ntp_server, time_zone):
+    mode = get_mode()
+    if mode == "virtual":
+        return set_time_automatically_docker(ntp_server, time_zone)
+    return set_time_automatically_physical(ntp_server, time_zone)
 
 
 def set_gnode_time(user_input):
