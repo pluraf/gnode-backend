@@ -42,21 +42,20 @@ def get_systemd_service_status(service_name):
         else:
             return ServiceStatus.FAILED
     except subprocess.CalledProcessError:
-        return ServiceStatus.FAILED
+        return ServiceStatus.MALFORMED
 
 
 def get_supervisor_service_status(service_name):
-    resp = run_command(['supervisorctl', 'show', service_name])
     try:
+        resp = run_command(['supervisorctl', 'show', service_name])
         status = resp.split()[1]
         if status == "RUNNING":
             return ServiceStatus.RUNNING
         if status == "STOPPED":
             return ServiceStatus.STOPPED
         return ServiceStatus.MALFORMED
-    except:
+    except subprocess.CalledProcessError:
         return ServiceStatus.MALFORMED
-
 
 
 def get_service_status(service_name):
@@ -72,7 +71,7 @@ async def status_get(_: str = Depends(authentication.authenticate)):
     response["service"] = {
         "mqbc": get_service_status("mqbc.service"),
         "m2eb": get_service_status("m2eb.service"),
-        "gcloud_client": get_systemd_service_status("gnode-cloud-client.service")
+        "gcloud_client": get_service_status("gnode-cloud-client.service")
     }
     response["network"] = network_connections.get_network_status()
     return JSONResponse(content=response)
