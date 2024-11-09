@@ -7,7 +7,7 @@ from app.utils import get_mode
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 async def get_info():
     mode = get_mode()
     api_versions = "{}.{}.{}".format(
