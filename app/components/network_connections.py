@@ -237,9 +237,9 @@ def connect_wifi(ssid, password):
         try:
             run_privileged_command(command)
         except subprocess.CalledProcessError as e:
-            if "property is invalid" in e.stderr:
+            if "property is invalid" in e.stderr or "Secrets were required" in e.stderr:
                 raise HTTPException(status_code=400, detail="Password is invalid")
-            raise HTTPException(status_code = 500, detail = str(e))
+            raise HTTPException(status_code = 500)
 
 def set_network_settings(user_input):
     # Accepts input of format:
