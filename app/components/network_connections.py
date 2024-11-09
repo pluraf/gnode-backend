@@ -102,6 +102,9 @@ def get_ipv4_settings(device_name):
 def get_wifi_state():
     return run_command(["nmcli", "radio", "wifi"])
 
+def get_ethernet_state():
+    return run_command(["nmcli", "radio", "wwan"])
+
 def get_available_wifi():
     # command: nmcli -m multiline -f 'SSID,SECURITY,DEVICE,SIGNAL,RATE' device wifi list
     # allowed fields: NAME,SSID,SSID-HEX,BSSID,MODE,CHAN,FREQ,RATE,BANDWIDTH,SIGNAL,
@@ -169,6 +172,7 @@ def get_netwok_settings():
     network_settings = {}
     try:
         network_settings["wifi_state"] = get_wifi_state()
+        network_settings["ethernet_state"] = get_ethernet_state()
         network_settings["available_wifi"] = get_available_wifi()
         network_settings["available_ethernet"] = get_available_ethernet()
         network_settings["active_connections"] = get_current_active_connections()
