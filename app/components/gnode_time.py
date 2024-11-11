@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 import subprocess
 
@@ -32,19 +32,13 @@ def set_time_manually_physical(date_time, time_zone):
         raise HTTPException(status_code = 500, detail = f"Failed to set system time: {e}")
 
 
-def set_time_manually_docker(date_time, time_zone):
-    try:
-        subprocess.run(['sudo', 'supervisorctl', 'stop', 'chronyd'], check=True)
-        subprocess.run(['ln', '-sf', f'/usr/share/zoneinfo/{time_zone}', '/etc/localtime'], check=True)
-        subprocess.run(['sudo', 'date', '--set', date_time], check=True)
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code = 500, detail = f"Failed to set system time: {e}")
-
-
 def set_time_manually(date_time, time_zone):
     mode = get_mode()
     if mode == "virtual":
-        return set_time_manually_docker(date_time, time_zone)
+        raise HTTPException(
+            status_code=status.HTTP_301_MOVED_PERMANENTLY,
+            detail="Time settings are not available in virtual mode."
+        )
     return set_time_manually_physical(date_time, time_zone)
 
 
@@ -60,21 +54,13 @@ def set_time_automatically_physical(ntp_server, time_zone):
         raise HTTPException(status_code = 500, detail = f"Failed to sync system time: {e}")
 
 
-def set_time_automatically_docker(ntp_server, time_zone):
-    try:
-        subprocess.run(['ln', '-sf', f'/usr/share/zoneinfo/{time_zone}', '/etc/localtime'], check=True)
-        subprocess.run(['sudo', 'supervisorctl', 'restart', 'chronyd'], check=True)
-        delete_old_ntp_servers()
-        subprocess.run(['sudo', 'chronyc', 'add', 'server', ntp_server, 'iburst'], check=True)
-        subprocess.run(['sudo', 'chronyc', 'makestep'], check=True)
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code = 500, detail = f"Failed to sync system time: {e}")
-
-
 def set_time_automatically(ntp_server, time_zone):
     mode = get_mode()
     if mode == "virtual":
-        return set_time_automatically_docker(ntp_server, time_zone)
+        raise HTTPException(
+            status_code=status.HTTP_301_MOVED_PERMANENTLY,
+            detail="Time settings are not available in virtual mode."
+        )
     return set_time_automatically_physical(ntp_server, time_zone)
 
 
