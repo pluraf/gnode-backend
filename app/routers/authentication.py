@@ -83,11 +83,10 @@ def authentication_status():
 
 def authenticate_user(db_session, username: str, password: str):
     try:
-        user = user_schema.UserAuth.model_validate(
-            user_crud.get_user_by_username(db_session, username)
-        )
+        user = user_crud.get_user_by_username(db_session, username)
         if not user:
             return False
+        user = user_schema.UserAuth.model_validate(user)
         if not pwd_context.verify(password, user.hashed_password):
             return False
         return user

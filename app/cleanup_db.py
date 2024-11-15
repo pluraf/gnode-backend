@@ -1,12 +1,15 @@
 from sqlalchemy import MetaData
-from database_setup import default_engine, auth_engine
+from app.database_setup import default_engine, auth_engine
 
-metadata = MetaData()
-metadata.reflect(bind=default_engine)
-metadata.drop_all(bind=default_engine)
+def cleanup_engine(engine):
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    metadata.drop_all(bind=engine)
 
-metadata = MetaData()
-metadata.reflect(bind=auth_engine)
-metadata.drop_all(bind=auth_engine)
+def run_cleanup():
+    cleanup_engine(default_engine)
+    cleanup_engine(auth_engine)
 
-print("All tables dropped successfully.")
+if __name__ == "__main__":
+    run_cleanup()
+    print("All tables dropped successfully.")
