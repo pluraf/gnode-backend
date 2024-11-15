@@ -79,3 +79,17 @@ def set_gnode_time(user_input):
         if not time_zone:
             raise HTTPException(status_code = 422, detail = "Missing required field!")
         set_time_automatically(ntp_server, time_zone)
+
+
+def list_timezones():
+    try:
+        result = subprocess.run(
+            ['timedatectl', 'list-timezones'], 
+            capture_output=True, text=True, check=True)
+        timezone_list = result.stdout.splitlines()
+        return timezone_list
+    except subprocess.CalledProcessError as e:
+        if e.stderr:
+            raise Exception(f"Failed to list timezones: {e.stderr.strip()}")
+        else:
+            raise Exception("Failed to list timezones")
