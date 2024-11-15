@@ -13,22 +13,21 @@ import app.schemas.user as user_schema
 
 from app.tests.utils import is_valid_jwt_token
 
-default_username = os.getenv("GNODE_DEFAULT_USERNAME")
-default_password = os.getenv("GNODE_DEFAULT_PASSWORD")
-
 def generate_valid_token(test_client):
+    default_username = os.getenv("GNODE_DEFAULT_USERNAME")
+    default_password = os.getenv("GNODE_DEFAULT_PASSWORD")
     response = test_client.post(
         settings.TOKEN_AUTH_URL,
         data={"username": default_username, "password": default_password},
     )
     return response.json()["access_token"]
 
-def test_get_token_url_success(test_client, 
-    username = default_username,
-    password = default_password):
+def test_get_token_url_success(test_client):
+    default_username = os.getenv("GNODE_DEFAULT_USERNAME")
+    default_password = os.getenv("GNODE_DEFAULT_PASSWORD")
     response = test_client.post(
         settings.TOKEN_AUTH_URL,
-        data={"username": username, "password": password},
+        data={"username": default_username, "password": default_password},
     )
     assert response.status_code == 200
 
@@ -60,12 +59,20 @@ def test_get_token_url_failure(test_client):
     assert response.json()["detail"] == "Incorrect username or password"
 
 def test_get_token_url_without_authentication(test_client, default_db_session):
+    default_username = os.getenv("GNODE_DEFAULT_USERNAME")
+    default_password = os.getenv("GNODE_DEFAULT_PASSWORD")
     Settings().authentication = False
     response = test_client.post(
         settings.TOKEN_AUTH_URL,
         data={"username": default_username, "password": default_password},
     )
     assert response.status_code == 204
+
+
+# Currently testing functions that use Depends tag by directly providing
+# the parameters instead of using the Dependentant function. 
+# The actual testing of Depends functionality will happen when
+# we test the actual API route that calls this function
 
 def test_validate_jwt_success(test_client):
     token = generate_valid_token(test_client)
@@ -95,6 +102,21 @@ def test_validate_jwt_failure():
         assert e.detail == "Token is not valid"
 
 
+def test_authentication_status(test_client):
+    try:
+        authentication.authentication_status()
+    except HTTPException as e:
+        pytest.fail(f"Incorrect authentication status")
+    Settings().authentication = False
+
+    #with authentication set as false
+    try:
+        authentication.authentication_status()
+    except HTTPException as e:
+        assert e.status_code == 301
+        assert e.detail == "Authentication is disabled; this endpoint is not available."
+
+
 @pytest.mark.asyncio
 async def test_get_current_active_user_success():
     test_user = user_schema.User(username= "user1", is_active=True,
@@ -121,7 +143,7 @@ async def test_get_current_user_success(test_client, default_db_session ):
     token = generate_valid_token(test_client)
     try:
         cur_user = await authentication.get_current_user(token, default_db_session )
-        assert cur_user.username == default_username
+        assert cur_user.username == os.getenv("GNODE_DEFAULT_USERNAME")
     except HTTPException as e:
         pytest.fail(f"Invalid User")
 
@@ -146,18 +168,19 @@ async def test_get_current_user_failure(default_db_session ):
         assert e.status_code == 401
         assert e.detail == "Could not validate credentials"
 
-def test_authentication_status(test_client):
-    try:
-        authentication.authentication_status()
-    except HTTPException as e:
-        pytest.fail(f"Incorrect authentication status")
-    Settings().authentication = False
 
-    #with authentication set as false
-    try:
-        authentication.authentication_status()
-    except HTTPException as e:
-        assert e.status_code == 301
-        assert e.detail == "Authentication is disabled; this endpoint is not available."
+# def test_load_private_key_from_file():
+#     old_private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
 
+#     # unset environment variable
+#     os.environ.pop("GNODE_PRIVATE_KEY_PATH", None)
+#     try:
+#         authentication.load_private_key_from_file()
+#         assert False
+#     except RuntimeError as e:
+#         assert str(e) == "GNODE_PRIVATE_KEY_PATH not set!"
+
+#     # set a non exixting file path
+#     os.environ['GNODE_PRIVATE_KEY_PATH'] = './randompath/random_file.txt'
+#     authentication.load_private_key_from_file()
 

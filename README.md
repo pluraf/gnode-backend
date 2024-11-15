@@ -50,8 +50,9 @@ http://localhost:8888/api/docs
     pip install -r requirements.txt
     pip install -r requirements-dev.txt
 
-* Set test environment variables
-    source test_env.sh
+* Set environment variables 
+
+    source env.sh
 
 * Run pytest
     pytest
