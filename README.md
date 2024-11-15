@@ -38,6 +38,24 @@ sudo apt-get install libpq-dev
 
 To try out APIs, start fastapi application and navigate to
 http://localhost:8888/api/docs
+
+
+### How do I run tests? ###
+* Setup venv and install requirements
+
+    python -m venv venv
+
+    source venv/bin/activate
+
+    pip install -r requirements.txt
+    pip install -r requirements-dev.txt
+
+* Set test environment variables
+    source test_env.sh
+
+* Run pytest
+    pytest
+
 ### Contribution guidelines ###
 
 * Writing tests
