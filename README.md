@@ -54,6 +54,8 @@ http://localhost:8888/api/docs
 
     source env.sh
 
+NOTE: The DB environment variables are changed when running tests. can be found in set_test_env_vars() function in conftest.py They are automatically changed back after test session ends.
+
 * Run pytest
     pytest
 

@@ -4,6 +4,9 @@ import os
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from fastapi import HTTPException
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+import jwt
 
 from app import settings
 from app.models.settings import SettingsModel
@@ -169,18 +172,161 @@ async def test_get_current_user_failure(default_db_session ):
         assert e.detail == "Could not validate credentials"
 
 
-# def test_load_private_key_from_file():
-#     old_private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
+def test_load_private_key_from_file_failure():
+    old_private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
 
-#     # unset environment variable
-#     os.environ.pop("GNODE_PRIVATE_KEY_PATH", None)
-#     try:
-#         authentication.load_private_key_from_file()
-#         assert False
-#     except RuntimeError as e:
-#         assert str(e) == "GNODE_PRIVATE_KEY_PATH not set!"
+    # unset environment variable
+    os.environ.pop("GNODE_PRIVATE_KEY_PATH", None)
+    try:
+        authentication.load_private_key_from_file()
+        assert False
+    except RuntimeError as e:
+        assert str(e) == "GNODE_PRIVATE_KEY_PATH not set!"
 
-#     # set a non exixting file path
-#     os.environ['GNODE_PRIVATE_KEY_PATH'] = './randompath/random_file.txt'
-#     authentication.load_private_key_from_file()
+    # set a non exixting file path
+    os.environ['GNODE_PRIVATE_KEY_PATH'] = './randompath/random_file.txt'
+    try:
+        authentication.load_private_key_from_file()
+        assert False
+    except FileNotFoundError:
+        assert True
 
+    test_file_path = "./app/tests/resources/test.pem"
+    
+    # test invalid key file
+    with open(test_file_path, "w") as file:
+        file.write("Test file.\n")
+    os.environ['GNODE_PRIVATE_KEY_PATH'] = test_file_path
+    try:
+        authentication.load_private_key_from_file()
+        assert False
+    except RuntimeError as e:
+        assert "GNODE_PRIVATE_KEY: Invalid PEM file or key format." in str(e)
+    os.remove(test_file_path)
+
+    os.environ['GNODE_PRIVATE_KEY_PATH'] = old_private_key_path
+
+    
+def test_load_private_key_from_file_success():
+    old_private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
+
+    test_file_path = "./app/tests/resources/test_private_key.pem"
+    
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    private_key_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()  # No password encryption
+    )
+
+    with open(test_file_path, "wb") as pem_file:
+        pem_file.write(private_key_pem)
+   
+    os.environ['GNODE_PRIVATE_KEY_PATH'] = test_file_path
+    read_key = authentication.load_private_key_from_file()
+    read_key_pem = read_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    assert private_key_pem == read_key_pem
+    os.remove(test_file_path)
+    os.environ['GNODE_PRIVATE_KEY_PATH'] = old_private_key_path
+
+    
+def test_load_public_key_from_file_failure():
+    old_public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
+
+    # unset environment variable
+    os.environ.pop("GNODE_PUBLIC_KEY_PATH", None)
+    try:
+        authentication.load_public_key_from_file()
+        assert False
+    except RuntimeError as e:
+        assert str(e) == "GNODE_PUBLIC_KEY_PATH not set!"
+
+    # set a non exixting file path
+    os.environ['GNODE_PUBLIC_KEY_PATH'] = './randompath/random_file.txt'
+    try:
+        authentication.load_public_key_from_file()
+        assert False
+    except FileNotFoundError:
+        assert True
+
+    test_file_path = "./app/tests/resources/test.pem"
+    
+    # test invalid key file
+    with open(test_file_path, "w") as file:
+        file.write("Test file.\n")
+    os.environ['GNODE_PUBLIC_KEY_PATH'] = test_file_path
+    try:
+        authentication.load_public_key_from_file()
+        assert False
+    except RuntimeError as e:
+        assert "GNODE_PUBLIC_KEY: Invalid PEM file or key format." in str(e)
+    os.remove(test_file_path)
+
+    os.environ['GNODE_PUBLIC_KEY_PATH'] = old_public_key_path
+
+    
+def test_load_public_key_from_file_success():
+    old_public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
+
+    test_file_path = "./app/tests/resources/test_public_key.pem"
+    
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    public_key = private_key.public_key()
+    public_key_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    with open(test_file_path, "wb") as pem_file:
+        pem_file.write(public_key_pem)
+   
+    os.environ['GNODE_PUBLIC_KEY_PATH'] = test_file_path
+    read_key = authentication.load_public_key_from_file()
+    read_key_pem = read_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    assert public_key_pem == read_key_pem
+    os.remove(test_file_path)
+    os.environ['GNODE_PUBLIC_KEY_PATH'] = old_public_key_path
+
+def test_authenticate_user(test_client, default_db_session):
+    default_username = os.getenv("GNODE_DEFAULT_USERNAME")
+    default_password = os.getenv("GNODE_DEFAULT_PASSWORD")
+    
+    # Correct data
+    result = authentication.authenticate_user(
+        default_db_session,
+        default_username,
+        default_password
+    )
+    assert result.username == default_username
+
+    # Invalid user
+    result = authentication.authenticate_user(
+        default_db_session,
+        "random_user",
+        "random_pass"
+    )
+    assert not result
+
+    # wrong password
+    result = authentication.authenticate_user(
+        default_db_session,
+        default_username,
+        "random_pass"
+    )
+    assert not result
+
+def test_create_access_token():
+    payload = {
+        "sub" : "test",
+        "attr" : "val"
+    }
+    token = authentication.create_access_token(payload)
+    decoded_payload = jwt.decode(token, options={"verify_signature": False})
+    assert all(key in decoded_payload and decoded_payload[key] == value for key, value in payload.items())
