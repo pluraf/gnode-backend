@@ -19,6 +19,7 @@ from app.components.settings import Settings
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidKey
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -35,24 +36,29 @@ router = APIRouter()
 def load_private_key_from_file():
     private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
     if not private_key_path:
-        raise RuntimeError()
+        raise RuntimeError("GNODE_PRIVATE_KEY_PATH not set!")
 
-    with open(private_key_path, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(
-            key_file.read(), password=None, backend=default_backend()
-        )
-    return private_key
+    try:
+        with open(private_key_path, "rb") as key_file:
+            private_key = serialization.load_pem_private_key(
+                key_file.read(), password=None, backend=default_backend()
+            )
+        return private_key
+    except (ValueError, InvalidKey) as e:
+        raise RuntimeError(f"GNODE_PRIVATE_KEY: Invalid PEM file or key format. {e}")
 
 
 def load_public_key_from_file():
     public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
     if not public_key_path:
-        raise RuntimeError()
+        raise RuntimeError("GNODE_PUBLIC_KEY_PATH not set!")
 
-    with open(public_key_path, "rb") as key_file:
-        public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
-    return public_key
-
+    try:
+        with open(public_key_path, "rb") as key_file:
+            public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
+        return public_key
+    except (ValueError, InvalidKey) as e:
+        raise RuntimeError(f"GNODE_PUBLIC_KEY: Invalid PEM file or key format. {e}")
 
 def validate_jwt(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -85,10 +91,10 @@ def authenticate_user(db_session, username: str, password: str):
     try:
         user = user_crud.get_user_by_username(db_session, username)
         if not user:
-            return False
+            return None
         user = user_schema.UserAuth.model_validate(user)
         if not pwd_context.verify(password, user.hashed_password):
-            return False
+            return None
         return user
     except ValidationError:
         credentials_exception = HTTPException(
