@@ -32,6 +32,7 @@ class Settings:
             self._settings.authentication = value
             session.add(self._settings)
             session.commit()
+            self._settings = session.query(SettingsModel).first()
         except exc.SQLAlchemyError:
             session.rollback()
             raise
@@ -53,6 +54,7 @@ class Settings:
             self._settings.gcloud = value
             session.add(self._settings)
             session.commit()
+            self._settings = session.query(SettingsModel).first()
         except exc.SQLAlchemyError:
             session.rollback()
             raise
