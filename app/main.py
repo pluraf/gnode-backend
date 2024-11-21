@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.routers.api import router as api_router
 from app.crud.users import load_first_user
 from app.database_setup import SessionLocal, DefaultBase, AuthBase, default_engine, auth_engine
+from app.components.settings import init_settings_table
 
 # We load all DB models here, so Base classes can create all tables in lifespan
 import app.models.authbundle
@@ -22,6 +23,8 @@ async def lifespan(app: FastAPI):
         # Load first user to DB
         load_first_user(db_session)
         db_session.close()
+        # Initialize settings table
+        init_settings_table()
         yield
     finally:
         # Clean up
