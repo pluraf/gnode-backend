@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import patch
 import subprocess
 
-from app import settings
 from app.models.settings import SettingsModel
 from app.components.settings import Settings
 from app import utils
