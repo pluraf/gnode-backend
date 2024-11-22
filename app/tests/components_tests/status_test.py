@@ -2,6 +2,7 @@ import pytest
 
 from app.utils import run_command
 from app.components import status
+from app.utils import get_mode, GNodeMode
 
 @pytest.mark.parametrize("load_state, active_state, sub_state, output", [
     ("loaded","active", "running", status.ServiceStatus.RUNNING ),  
@@ -41,3 +42,19 @@ def test_get_supervisor_service_status(mocker,supervisor_status, output):
     mocker.patch("app.components.status.run_command", side_effect=mock_run_command)
     res = status.get_supervisor_service_status("test_service")
     assert res == output
+
+@pytest.mark.parametrize("mode", [
+    (GNodeMode.PHYSICAL),
+    (GNodeMode.VIRTUAL)
+])
+def test_get_service_status(mocker, mode):
+    mocker.patch("app.components.status.get_mode", return_value = mode)
+    supervisor_spy = mocker.spy(status, "get_supervisor_service_status")
+    systemd_spy = mocker.spy(status, "get_systemd_service_status")
+    status.get_service_status("test")
+    if mode == GNodeMode.PHYSICAL:
+        assert systemd_spy.call_count == 1
+        assert supervisor_spy.call_count == 0
+    else:
+        assert systemd_spy.call_count == 0
+        assert supervisor_spy.call_count == 1
