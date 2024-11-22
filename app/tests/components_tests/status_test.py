@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 
 from app.utils import run_command
 from app.components import status
@@ -13,7 +12,7 @@ from app.components import status
     ("loaded","active", "exited", status.ServiceStatus.STOPPED ),  
     ("loaded","activating", "waiting", status.ServiceStatus.STOPPED )
 ])
-def test_get_systemd_service_status(load_state, active_state, sub_state, output):
+def test_get_systemd_service_status(mocker,load_state, active_state, sub_state, output):
     real_run_command = run_command
     def mock_run_command(cmd):
         if cmd[:2] == ['systemctl', 'show'] and \
@@ -23,22 +22,22 @@ def test_get_systemd_service_status(load_state, active_state, sub_state, output)
                 "SubState=" + sub_state
         # For other commands, call the real run_command
         return real_run_command(cmd)
-    with patch("app.components.status.run_command", side_effect=mock_run_command):
-        res = status.get_systemd_service_status("test_service")
-        assert res == output
+    mocker.patch("app.components.status.run_command", side_effect=mock_run_command)
+    res = status.get_systemd_service_status("test_service")
+    assert res == output
 
 @pytest.mark.parametrize("supervisor_status, output", [
     ("test RUNNING", status.ServiceStatus.RUNNING),     
     ("test STOPPED", status.ServiceStatus.STOPPED),
     ("test FAILED", status.ServiceStatus.MALFORMED)
 ])
-def test_get_supervisor_service_status(supervisor_status, output):
+def test_get_supervisor_service_status(mocker,supervisor_status, output):
     real_run_command = run_command
     def mock_run_command(cmd):
         if cmd[:2] == ['supervisorctl', 'show'] :
             return supervisor_status
         # For other commands, call the real run_command
         return real_run_command(cmd)
-    with patch("app.components.status.run_command", side_effect=mock_run_command):
-        res = status.get_supervisor_service_status("test_service")
-        assert res == output
+    mocker.patch("app.components.status.run_command", side_effect=mock_run_command)
+    res = status.get_supervisor_service_status("test_service")
+    assert res == output
