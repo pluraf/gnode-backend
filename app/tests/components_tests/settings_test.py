@@ -18,7 +18,7 @@ def test_settings_getters(test_client):
     (False, True),     
     (False, False)      
 ])
-def test_settings_setters(mocker, test_client,default_db_session, auth, gcloud):
+def test_settings_setters(auth, mocker, test_client,default_db_session, gcloud):
     real_subprocess_run = subprocess.run
     def mock_subprocess_run(cmd, *args, **kwargs):
         if cmd[:3] == ["sudo", "/bin/systemctl", "start"] or \

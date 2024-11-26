@@ -59,6 +59,9 @@ NOTE: The DB environment variables are changed when running tests. can be found 
 * Run pytest
     pytest
 
+To run specific test file:
+    pytest <test_file_path>
+
 ### Contribution guidelines ###
 
 * Writing tests
