@@ -40,7 +40,14 @@ def cidr_to_ip_and_netmask(cidr):
 
 def is_valid_ipv4_address(ip):
     try:
-        ipaddress.IPv4Address(ip)
+        ip_add = ipaddress.IPv4Address(ip)
+        if(
+            ip_add.is_loopback
+            or ip_add.is_multicast
+            or ip_add.is_reserved
+            or ip_add.is_unspecified
+        ):
+            return False
         return True
     except ipaddress.AddressValueError:
         return False
@@ -56,9 +63,15 @@ def is_valid_gateway(gateway, network_ip, subnet_mask):
     try:
         # Create a network with the provided IP and subnet mask
         network = ipaddress.IPv4Network(f"{network_ip}/{subnet_mask}", strict=False)
+        if not is_valid_ipv4_address(gateway):
+            return False
         # Check if the gateway is within the network range but not the network address
         gateway_ip = ipaddress.IPv4Address(gateway)
-        return gateway_ip in network and gateway_ip != network.network_address
+        return (
+            gateway_ip in network 
+            and gateway_ip != network.network_address
+            and gateway_ip != network.broadcast_address
+        )
     except (ValueError, ipaddress.AddressValueError):
         return False
 
