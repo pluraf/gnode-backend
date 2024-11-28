@@ -43,7 +43,7 @@ async def settings_get(_: str = Depends(authentication.authenticate)):
     current_timestamp = int(datetime.now(timezone.utc).timestamp())
     with open("/etc/timezone", "r") as tz:
         current_timezone = tz.read().strip()
-    iso_8601_utc = datetime.now(ZoneInfo(current_timezone)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    iso_8601_utc = datetime.now(ZoneInfo(current_timezone)).strftime("%Y-%m-%dT%H:%M:%S%z")
     response["time"] = {
         "timestamp": current_timestamp,
         "iso8601": iso_8601_utc,
