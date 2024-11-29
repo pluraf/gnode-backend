@@ -34,15 +34,10 @@ async def settings_get(_: str = Depends(authentication.authenticate)):
         socket.close()
     response["allow_anonymous"] = bool(message[0])
 
-    current_timestamp = int(datetime.now(timezone.utc).timestamp())
-    with open("/etc/timezone", "r") as tz:
-        current_timezone = tz.read().strip()
-    iso_8601_utc = datetime.now(ZoneInfo(current_timezone)).strftime("%Y-%m-%dT%H:%M:%S%z")
-    response["time"] = {
-        "timestamp": current_timestamp,
-        "iso8601": iso_8601_utc,
-        "timezone": current_timezone
-    }
+    try:
+        response["time"] = gnode_time.get_gnode_time()
+    except:
+        response["time"] = {}
 
     try:
         response["network_settings"] = network_connections.get_netwok_settings()

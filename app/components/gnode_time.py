@@ -1,4 +1,6 @@
 import subprocess
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
 
@@ -24,8 +26,11 @@ def set_time_manual(date_time, time_zone):
         run_privileged_command(['timedatectl', 'set-ntp', 'false'])
         run_privileged_command(['timedatectl', 'set-local-rtc', '0'])
         run_privileged_command(['timedatectl', 'set-timezone', time_zone])
+        run_privileged_command(
+            '/usr/bin/env DEBIAN_FRONTEND=noninteractive /usr/sbin/dpkg-reconfigure tzdata',
+            shell=True
+        )
         run_privileged_command(['date', '--set', date_time])
-        run_privileged_command(['timedatectl', 'set-local-rtc', '1'])
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = f"Failed to set system time!")
 
@@ -34,6 +39,10 @@ def set_time_auto(ntp_server, time_zone):
     try:
         run_privileged_command(['timedatectl', 'set-local-rtc', '0'])
         run_privileged_command(['timedatectl', 'set-timezone', time_zone])
+        run_privileged_command(
+            '/usr/bin/env DEBIAN_FRONTEND=noninteractive /usr/sbin/dpkg-reconfigure tzdata',
+            shell=True
+        )
         run_privileged_command(['systemctl', 'restart', 'chrony.service'])
         delete_old_ntp_servers()
         run_privileged_command(['chronyc', 'add', 'server', ntp_server, 'iburst'])
@@ -67,6 +76,26 @@ def set_gnode_time(user_input):
             raise HTTPException(status_code = 422, detail = "Missing required field!")
         set_time_auto(ntp_server, time_zone)
 
+
+def get_gnode_time():
+    time_conf = run_command(["timedatectl", "show"])
+    for line in time_conf.splitlines():
+        try:
+            key, value = map(str.strip, line.split("="))
+        except IndexError:
+            continue
+        if key == "NTP":  # Detect current mode
+            auto = value == "yes"
+        elif key == "Timezone":  # Detect current timezone
+            current_timezone = value
+    now = datetime.now(ZoneInfo(current_timezone))
+    # Return summary
+    return {
+        "timestamp": now.timestamp(),
+        "iso8601": now.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "timezone": current_timezone,
+        "auto": auto
+    }
 
 def list_timezones():
     try:
