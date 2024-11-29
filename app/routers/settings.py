@@ -16,12 +16,6 @@ import app.settings as app_settings
 router = APIRouter()
 
 
-
-
-n = '{"available_wifi":[{"ssid":"Pluraf_Test","security":"WPA2","device":"wlan0","signal":"84","rate":"65 Mbit/s"},{"ssid":"Pluraf","security":"WPA2","device":"wlan0","signal":"71","rate":"65 Mbit/s"},{"ssid":"Elegant","security":"WPA2","device":"wlan0","signal":"52","rate":"65 Mbit/s"},{"ssid":"WIFIHUB_feb410","security":"WPA2","device":"wlan0","signal":"32","rate":"65 Mbit/s"},{"ssid":"Borgen 2.0","security":"WPA2","device":"wlan0","signal":"32","rate":"65 Mbit/s"},{"ssid":"#Telia-2C5578","security":"WPA2","device":"wlan0","signal":"30","rate":"65 Mbit/s"},{"ssid":"Tele2_45c015","security":"WPA2","device":"wlan0","signal":"30","rate":"65 Mbit/s"},{"ssid":"DIRECT-xyPhilips TV","security":"WPA2","device":"wlan0","signal":"29","rate":"65 Mbit/s"},{"ssid":"WORLDWIDEWEB","security":"WPA2","device":"wlan0","signal":"27","rate":"65 Mbit/s"},{"ssid":"w","security":"WPA2","device":"wlan0","signal":"27","rate":"65 Mbit/s"},{"ssid":"Bratt","security":"WPA2","device":"wlan0","signal":"25","rate":"65 Mbit/s"},{"ssid":"Telia-496575","security":"WPA2","device":"wlan0","signal":"25","rate":"65 Mbit/s"},{"ssid":"Tele2_fe123c","security":"WPA2","device":"wlan0","signal":"24","rate":"65 Mbit/s"},{"ssid":"TP-Link_B90C","security":"WPA2","device":"wlan0","signal":"22","rate":"65 Mbit/s"},{"ssid":"Tele2_CB8816","security":"WPA2","device":"wlan0","signal":"22","rate":"65 Mbit/s"},{"ssid":"WIFI","security":"WPA2","device":"wlan0","signal":"19","rate":"65 Mbit/s"},{"ssid":"EWAYS-Elbil1","security":"WPA2","device":"wlan0","signal":"17","rate":"65 Mbit/s"},{"ssid":"COMHEM_9c7b93","security":"WPA2","device":"wlan0","signal":"17","rate":"65 Mbit/s"}],"available_ethernet":[{"name":"Eth","type":"ethernet","device":"eth0"}],"active_connections":[{"name":"Eth","type":"ethernet","device":"eth0","ipv4_method":"auto","ipv4_settings":{"address":"192.168.1.174","netmask":"255.255.255.0","gateway":"192.168.1.1","dns":"192.168.1.1"}},{"name":"Pluraf","type":"wifi","device":"wlan0","ipv4_method":"auto","ipv4_settings":{"address":"192.168.1.252","netmask":"255.255.255.0","gateway":"192.168.1.1","dns":"192.168.1.1"}}],"fetching_status":"success"}'
-nj = json.loads(n)
-
-
 @router.get("/")
 async def settings_get(_: str = Depends(authentication.authenticate)):
     socket = zmq_context.socket(zmq.REQ)
