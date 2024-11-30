@@ -118,7 +118,14 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     return encoded_jwt
 
 
-@router.post("/")
+@router.api_route("/", methods=["GET"])
+async def login_for_access_token():
+    if not Settings().authentication:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@router.api_route("/", methods=["POST"])
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db_session: Session = Depends(get_db)
