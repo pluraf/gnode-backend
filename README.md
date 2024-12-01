@@ -24,7 +24,7 @@ This README would normally document whatever steps are necessary to get your app
 
 * start fastapi application
 
-    uvicorn app.main_dev:app --reload --port 8888
+    uvicorn app.main:app --reload --port 8888
 
 ---
 
