@@ -117,7 +117,8 @@ def merge_openapi_specs():
 #
     openapi.setdefault("tags", []).extend(m2eb_openapi["tags"])
     openapi["paths"].update(m2eb_openapi["paths"])
-    openapi['components']['schemas'].update(m2eb_openapi["components"]["schemas"])
+    openapi["components"]["schemas"].update(m2eb_openapi["components"]["schemas"])
+    openapi["servers"] = [{"url": app.root_path}]
 
     return openapi
 
