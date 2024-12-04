@@ -100,7 +100,7 @@ def merge_openapi_specs():
         routes=app.routes,
     )
 
-    with open("m2eb_openapi.json", "r") as f:
+    with open("app/openapi/m2eb_openapi.json", "r") as f:
         m2eb_openapi = json.load(f)
 #
 #    openapi["info"] = {
