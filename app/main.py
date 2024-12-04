@@ -60,7 +60,7 @@ app = get_application()
 
 static_prefix = ""
 
-# Uncomment, if you want to test documentation running only gnode-backend
+# Uncomment the next two lines, if you want to test documentation running only gnode-backend
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 # static_prefix = "/api"
 

@@ -1,24 +1,23 @@
 import zmq
-import json
 
 from fastapi import APIRouter, Response, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
 from typing import Any
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from app.routers import authentication
 from app.components import gnode_time, network_connections
 from app.components.settings import Settings
 from app.zmq_setup import zmq_context
+from app.auth import authenticate
+
 import app.settings as app_settings
 
 
 router = APIRouter(tags=["settings"])
 
 
-@router.get("/")
-async def settings_get(_: str = Depends(authentication.authenticate)):
+@router.get("/", dependencies=[Depends(authenticate)])
+async def settings_get():
     socket = zmq_context.socket(zmq.REQ)
     socket.setsockopt(zmq.RCVTIMEO, 500)
     socket.setsockopt(zmq.LINGER, 0)
@@ -52,7 +51,7 @@ async def settings_get(_: str = Depends(authentication.authenticate)):
     return JSONResponse(content=response)
 
 
-@router.put("/")
+@router.put("/", dependencies=[Depends(authenticate)])
 async def settings_put(settings: dict[str, Any], _: str = Depends(authentication.authenticate)):
     # TODO: Move each block to a dedicated function (class?)
     last_exc = None

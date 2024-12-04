@@ -1,17 +1,19 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from app.routers import authentication
+from app.auth import authenticate
 from app.components import network_connections
 from app.components.status import get_service_status
+
 import app.settings as app_settings
+
 
 
 router = APIRouter(tags=["status"])
 
 
-@router.get("")
-async def status_get(_: str = Depends(authentication.authenticate)):
+@router.get("", dependencies=[Depends(authenticate)])
+async def status_get():
     response = {}
     response["service"] = {
         "mqbc": get_service_status(app_settings.MQBC_SERVICE_NAME),

@@ -3,8 +3,6 @@ from fastapi import APIRouter, Body, Form, Depends, HTTPException, status, Reque
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-import jwt
-from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel, ValidationError
 import app.settings as settings
@@ -14,14 +12,13 @@ from datetime import datetime, timedelta, timezone
 import app.crud.users as user_crud
 import app.schemas.user as user_schema
 from app.dependencies import get_db
+from app.auth import authenticate, create_access_token
 
 from app.components.settings import Settings
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-from cryptography.exceptions import InvalidKey
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL)
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -31,52 +28,6 @@ class Token(BaseModel):
 
 
 router = APIRouter(tags=["authentication"])
-
-
-def load_private_key_from_file():
-    private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
-    if not private_key_path:
-        raise RuntimeError("GNODE_PRIVATE_KEY_PATH not set!")
-
-    try:
-        with open(private_key_path, "rb") as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(), password=None, backend=default_backend()
-            )
-        return private_key
-    except (ValueError, InvalidKey) as e:
-        raise RuntimeError(f"GNODE_PRIVATE_KEY: Invalid PEM file or key format. {e}")
-
-
-def load_public_key_from_file():
-    public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
-    if not public_key_path:
-        raise RuntimeError("GNODE_PUBLIC_KEY_PATH not set!")
-
-    try:
-        with open(public_key_path, "rb") as key_file:
-            public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
-        return public_key
-    except (ValueError, InvalidKey) as e:
-        raise RuntimeError(f"GNODE_PUBLIC_KEY: Invalid PEM file or key format. {e}")
-
-def validate_jwt(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-                                status_code = status.HTTP_401_UNAUTHORIZED,
-                                detail = "Token is not valid",
-                                headers = {"WWW-Authenticate": "Bearer"}
-                            )
-    try:
-        public_key = load_public_key_from_file()
-        jwt.decode(token, public_key, algorithms=settings.ALGORITHM)
-    except InvalidTokenError:
-        raise credentials_exception
-
-
-async def authenticate(request: Request):
-    if Settings().authentication:
-        token = await oauth2_scheme(request)
-        return validate_jwt(token)
 
 
 def authentication_status():
@@ -102,20 +53,6 @@ def authenticate_user(db_session, username: str, password: str):
             detail="Could not authenticate user",
         )
         raise credentials_exception
-
-
-def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-
-    private_key = load_private_key_from_file()
-
-    encoded_jwt = jwt.encode(to_encode, private_key, algorithm=settings.ALGORITHM)
-    return encoded_jwt
 
 
 @router.api_route("/", methods=["GET"])
@@ -148,7 +85,7 @@ async def login_for_access_token(
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    decoded_token = Depends(authenticate),
     db_session: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
@@ -156,13 +93,8 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        public_key = load_public_key_from_file()
-        payload = jwt.decode(token, public_key, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except InvalidTokenError:
+    username = decoded_token.get("sub")
+    if username is None:
         raise credentials_exception
     try:
         user = user_schema.User.model_validate(

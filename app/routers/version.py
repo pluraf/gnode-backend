@@ -1,10 +1,11 @@
 import zmq
 
-from fastapi import APIRouter
-from typing import Dict
+from fastapi import APIRouter, Depends
+
+import app.settings as app_settings
 
 from app.zmq_setup import zmq_context
-import app.settings as app_settings
+from app.auth import authenticate
 
 
 router = APIRouter(tags=["info"])
@@ -44,7 +45,7 @@ def get_gnode_api_version():
     return serial_number
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(authenticate)])
 async def api_version_get():
     api_version = "{}.{}.{}".format(
         get_gnode_api_version(),

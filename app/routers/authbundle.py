@@ -1,22 +1,27 @@
 import uuid
 
 from fastapi import APIRouter, Form, File, Depends, UploadFile, HTTPException, status, Response
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
 from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
 
+import app.settings as settings
 import app.schemas.autbundle as autbundle_schema
-from app.routers import authentication
 from app.models.authbundle import Authbundle
 from app.database_setup import auth_engine
+from app.auth import authenticate
 
 
 router = APIRouter(tags=["authbundle"])
 
 
-@router.post("/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL)
+
+
+@router.post("/", dependencies=[Depends(authenticate)])
 async def authbundle_create(
     authbundle_id: Optional[str] = Form(None),
     service_type: str = Form(...),
@@ -24,8 +29,7 @@ async def authbundle_create(
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
-    keyfile: Optional[UploadFile] = File(None),
-    _: str = Depends(authentication.authenticate)
+    keyfile: Optional[UploadFile] = File(None)
 ):
     if not authbundle_id:
         authbundle_id = uuid.uuid4().hex
@@ -61,8 +65,12 @@ async def authbundle_create(
     return JSONResponse(content={"authbundle_id": authbundle_id})
 
 
-@router.get("/", response_model=list[autbundle_schema.AuthbundleListResponse])
-async def authbundle_list(_: str = Depends(authentication.authenticate)):
+@router.get(
+    "/",
+    response_model=list[autbundle_schema.AuthbundleListResponse],
+    dependencies=[Depends(authenticate)]
+)
+async def authbundle_list():
     session = sessionmaker(bind=auth_engine)()
     try:
         return session.query(Authbundle).all()
@@ -70,10 +78,9 @@ async def authbundle_list(_: str = Depends(authentication.authenticate)):
         session.close()
 
 
-@router.delete("/", response_model=dict)
+@router.delete("/", response_model=dict, dependencies=[Depends(authenticate)])
 async def authbundle_delete(
-    authbundle_ids: List[str],
-    _: str = Depends(authentication.authenticate)
+    authbundle_ids: List[str]
 ):
     session = sessionmaker(bind=auth_engine)()
     deleted = []
@@ -97,14 +104,13 @@ async def authbundle_delete(
     return {"deleted": deleted}
 
 
-@router.put("/{authbundle_id}")
+@router.put("/{authbundle_id}", dependencies=[Depends(authenticate)])
 async def authbundle_edit(
     authbundle_id: str,
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
-    keyfile: Optional[UploadFile] = File(None),
-    _: str = Depends(authentication.authenticate)
+    keyfile: Optional[UploadFile] = File(None)
 ):
     session = sessionmaker(bind=auth_engine)()
 
@@ -140,13 +146,15 @@ async def authbundle_edit(
     return JSONResponse(content={"authbundle_id": authbundle_id})
 
 
-@router.get("/{authbundle_id}", response_model=autbundle_schema.AuthbundleDetailsResponse)
+@router.get(
+    "/{authbundle_id}",
+    response_model=autbundle_schema.AuthbundleDetailsResponse,
+    dependencies=[Depends(authenticate)]
+)
 async def authbundle_details(
-    authbundle_id: str,
-    _: str = Depends(authentication.authenticate)
+    authbundle_id: str
 ):
     session = sessionmaker(bind=auth_engine)()
-
     authbundle = session.query(Authbundle).filter(Authbundle.authbundle_id == authbundle_id).first()
     if not authbundle:
         raise HTTPException(

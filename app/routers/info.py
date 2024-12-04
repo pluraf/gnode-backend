@@ -1,13 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.routers import version
 from app.utils import get_mode
+from app.auth import authenticate
 
 
 router = APIRouter(tags=["info"])
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(authenticate)])
 async def get_info():
     mode = get_mode()
     api_versions = "{}.{}.{}".format(
