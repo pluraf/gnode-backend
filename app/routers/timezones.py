@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.components.gnode_time import list_timezones
 
 
-router = APIRouter()
+router = APIRouter(tags=["info"])
 
 
 @router.get("")

@@ -10,6 +10,7 @@ from app.routers import authentication
 
 
 router = APIRouter(
+    tags=["user"],
     dependencies=[Depends(authentication.authentication_status)]
 )
 

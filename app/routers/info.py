@@ -4,7 +4,7 @@ from app.routers import version
 from app.utils import get_mode
 
 
-router = APIRouter()
+router = APIRouter(tags=["info"])
 
 
 @router.get("")

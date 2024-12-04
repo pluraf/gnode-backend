@@ -13,7 +13,8 @@ from app.components.settings import Settings
 from app.zmq_setup import zmq_context
 import app.settings as app_settings
 
-router = APIRouter()
+
+router = APIRouter(tags=["settings"])
 
 
 @router.get("/")

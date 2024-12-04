@@ -1,3 +1,5 @@
+import json
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,6 +8,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
 )
+from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
 from app.routers.api import router as api_router
@@ -55,18 +58,21 @@ app = get_application()
 ###############################################################################
 # Documentation
 
+static_prefix = ""
 
-#app.mount("/static", StaticFiles(directory="static"), name="static")
+# Uncomment, if you want to test documentation running only gnode-backend
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+# static_prefix = "/api"
 
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
-        openapi_url="/api/openapi.json",
-        title=app.title + " - Swagger",
-        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-        swagger_js_url="/static/swagger-ui-bundle.js",
-        swagger_css_url="/static/swagger-ui.css",
+        openapi_url = "/api/openapi.json",
+        title = app.title + " - Swagger",
+        oauth2_redirect_url = app.swagger_ui_oauth2_redirect_url,
+        swagger_js_url = static_prefix + "/static/swagger-ui-bundle.js",
+        swagger_css_url = static_prefix + "/static/swagger-ui.css",
         swagger_favicon_url = "/favicon.ico"
     )
 
@@ -79,9 +85,41 @@ async def swagger_ui_redirect():
 @app.get("/redoc", include_in_schema=False)
 async def redoc_html():
     return get_redoc_html(
-        openapi_url="/api/openapi.json",
-        title=app.title + " - ReDoc",
-        redoc_js_url="/static/redoc.standalone.js",
-        with_google_fonts=False,
-        redoc_favicon_url="/favicon.ico"
+        openapi_url = "/api/openapi.json",
+        title = app.title + " - ReDoc",
+        redoc_js_url = static_prefix + "/static/redoc.standalone.js",
+        with_google_fonts = False,
+        redoc_favicon_url = "/favicon.ico"
     )
+
+
+def merge_openapi_specs():
+    openapi = get_openapi(
+        title="G-Node API",
+        version="0.0.0",
+        routes=app.routes,
+    )
+
+    with open("m2eb_openapi.json", "r") as f:
+        m2eb_openapi = json.load(f)
+#
+#    openapi["info"] = {
+#        "title": "API",
+#        "license": {
+#            "name": "BSD 3-Clause",
+#            "url": "https://spdx.org/licenses/BSD-3-Clause.html"
+#        },
+#        "externalDocs": {
+#            "description": "Find out more about G-Node",
+#            "url": "https://docs.iotplan.io/gnode/index.html"
+#        }
+#    }
+#
+    openapi.setdefault("tags", []).extend(m2eb_openapi["tags"])
+    openapi["paths"].update(m2eb_openapi["paths"])
+    openapi['components']['schemas'].update(m2eb_openapi["components"]["schemas"])
+
+    return openapi
+
+
+app.openapi = merge_openapi_specs

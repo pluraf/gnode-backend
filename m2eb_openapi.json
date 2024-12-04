@@ -1,0 +1,685 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "G-Node - OpenAPI 3.0",
+    "license": {
+      "name": "BSD 3-Clause",
+      "url": "https://spdx.org/licenses/BSD-3-Clause.html"
+    },
+    "version": "1.0.11"
+  },
+  "externalDocs": {
+    "description": "Find out more about G-Node",
+    "url": "https://docs.iotplan.io/gnode/index.html"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "tags": [
+    {
+      "name": "pipeline",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "https://docs.iotplan.io/gnode/pipelines.html"
+      }
+    },
+    {
+      "name": "pipeline",
+      "description": "Get pipeline status",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "https://docs.iotplan.io/gnode/pipelines.html"
+      }
+    },
+    {
+      "name": "pipeline",
+      "description": "Control pipeline state"
+    }
+  ],
+  "paths": {
+    "/pipeline/config/": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Returns all G-Node pipelines",
+        "operationId": "getPipelinesConfig",
+        "responses": {
+          "200": {
+            "description": "successful operation 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pipelines"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/pipeline/config/{pipeline_id}": {
+      "parameters": [
+        {
+          "name": "pipeline_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Returns G-Node pipeline by Id",
+        "operationId": "getPipeline",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pipeline"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pipeline not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Create pipeline",
+        "operationId": "createPipeline",
+        "requestBody": {
+          "description": "Create a new pipeline",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pipeline"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "422": {
+            "description": "Invalid pipeline configuration"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Update pipeline config",
+        "operationId": "updatePipeline",
+        "requestBody": {
+          "description": "Update existing pipeline",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pipeline"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "422": {
+            "description": "Invalid pipeline configuration"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Delete pipeline",
+        "operationId": "deletePipeline",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "404": {
+            "description": "Pipeline does not exist"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/pipeline/status/": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Get pipelines status",
+        "operationId": "getPipelinesStatus",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/PipelineStatus"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/pipeline/status/{pipeline_id}": {
+      "parameters": [
+        {
+          "name": "pipeline_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Get pipelines status",
+        "operationId": "getPipelineStatus",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pipeline not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/pipeline/control/{pipeline_id}/{command}": {
+      "parameters": [
+        {
+          "name": "pipeline_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "command",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "start",
+              "stop",
+              "restart"
+            ]
+          }
+        }
+      ],
+      "put": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Control pipeline state",
+        "operationId": "setPipelineState",
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "404": {
+            "description": "Pipeline not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FiltraProperties": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "msg_format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "corb"
+            ]
+          },
+          "goto_accepted": {
+            "type": "string"
+          },
+          "goto_rejected": {
+            "type": "string"
+          },
+          "goto": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "logical_negation": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "queues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AllFiltras": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "builder"
+                    ]
+                  },
+                  "payload": {
+                    "type": "object"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "comparator"
+                    ]
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "eq"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "eraser"
+                    ]
+                  },
+                  "keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "finder"
+                    ]
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "contain",
+                      "contained",
+                      "match"
+                    ]
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "value_key": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "limiter"
+                    ]
+                  },
+                  "size": {
+                    "type": "integer",
+                    "format": "uint64"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "nop"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FiltraProperties"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "splitter"
+                    ]
+                  },
+                  "chunk_size": {
+                    "type": "integer",
+                    "format": "uint64"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "Pipeline": {
+        "type": "object",
+        "properties": {
+          "connector_in": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "mqtt"
+              }
+            }
+          },
+          "connector_out": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "gcp_pubsub"
+              }
+            }
+          },
+          "filtras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllFiltras"
+            }
+          }
+        },
+        "example": {
+          "connector_in": {
+            "type": "mqtt"
+          },
+          "conector_out": {
+            "type": "gcp_pubsub",
+            "authbundle_id": "my_authbundle_id",
+            "project_id": "my_project_id",
+            "topic_id": "my_topic_id"
+          },
+          "filtras": [
+            {
+              "type": "comparator",
+              "operator": "gt",
+              "msg_format": "json",
+              "value_key": "temp",
+              "comparand": 5.4
+            },
+            {
+              "type": "finder",
+              "operator": "contain",
+              "text": "LOG"
+            }
+          ]
+        }
+      },
+      "Pipelines": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/Pipeline"
+        },
+        "example": {
+          "pipeline1": {
+            "connector_in": {
+              "type": "mqtt"
+            },
+            "conector_out": {
+              "type": "gcp_pubsub",
+              "authbundle_id": "my_authbundle_id",
+              "project_id": "my_project_id",
+              "topic_id": "my_topic_id"
+            },
+            "filtras": [
+              {
+                "type": "comparator",
+                "operator": "gt",
+                "msg_format": "json",
+                "value_key": "temp",
+                "comparand": 5.4
+              },
+              {
+                "type": "finder",
+                "operator": "contain",
+                "text": "LOG"
+              }
+            ]
+          },
+          "pipeline2": {
+            "connector_in": {
+              "type": "mqtt",
+              "topic": "/topic/+/event"
+            },
+            "conector_out": {
+              "type": "aws_s3",
+              "authbundle_id": "my_authbundle_id",
+              "bucket_name": "my_bucket_name",
+              "object_name": "my_object_name"
+            },
+            "filtras": [
+              {
+                "type": "limiter",
+                "size": 1024
+              }
+            ]
+          }
+        }
+      },
+      "PipelineStatus": {
+        "type": "object",
+        "properties": {
+          "count_in": {
+            "type": "integer"
+          },
+          "count_out": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "last_in": {
+            "type": "integer",
+            "description": "UNIX timestamp of the last message received by the pipeline"
+          },
+          "last_out": {
+            "type": "integer",
+            "description": "UNIX timestamp of the last message sent by the pipeline"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "stopped",
+              "running",
+              "failed",
+              "malformed"
+            ]
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "tokenUrl": "/api/auth/token",
+            "scopes": {
+              "read": "data",
+              "write": "data"
+            }
+          }
+        }
+      }
+    }
+  }
+}

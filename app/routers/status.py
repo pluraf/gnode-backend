@@ -6,7 +6,9 @@ from app.components import network_connections
 from app.components.status import get_service_status
 import app.settings as app_settings
 
-router = APIRouter()
+
+router = APIRouter(tags=["status"])
+
 
 @router.get("")
 async def status_get(_: str = Depends(authentication.authenticate)):

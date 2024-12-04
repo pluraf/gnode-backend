@@ -6,7 +6,8 @@ from typing import Dict
 from app.zmq_setup import zmq_context
 import app.settings as app_settings
 
-router = APIRouter()
+
+router = APIRouter(tags=["info"])
 
 
 def get_version_from_zmq(address: str) -> str:

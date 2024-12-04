@@ -14,7 +14,7 @@ import app.settings as app_settings
 router = APIRouter()
 
 
-@router.get("/", response_class=PlainTextResponse)
+@router.get("/", response_class=PlainTextResponse, include_in_schema=False)
 async def retrieve_home():
     return "Welcome to G-Node!"
 

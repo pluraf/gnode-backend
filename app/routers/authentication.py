@@ -30,7 +30,7 @@ class Token(BaseModel):
     token_type: str
 
 
-router = APIRouter()
+router = APIRouter(tags=["authentication"])
 
 
 def load_private_key_from_file():

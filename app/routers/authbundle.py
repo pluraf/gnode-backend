@@ -13,7 +13,7 @@ from app.models.authbundle import Authbundle
 from app.database_setup import auth_engine
 
 
-router = APIRouter()
+router = APIRouter(tags=["authbundle"])
 
 
 @router.post("/")
