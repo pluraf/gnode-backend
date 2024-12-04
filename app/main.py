@@ -93,12 +93,21 @@ async def redoc_html():
     )
 
 
+def prepend_paths(prefix, paths):
+    new_paths = {}
+    for path, path_data in paths.items():
+        new_paths[prefix + path] = path_data
+    return new_paths
+
+
 def merge_openapi_specs():
     openapi = get_openapi(
         title="G-Node API",
         version="0.0.0",
         routes=app.routes,
     )
+
+    openapi["paths"] = prepend_paths("/api", openapi["paths"])
 
     with open("app/openapi/m2eb_openapi.json", "r") as f:
         m2eb_openapi = json.load(f)
@@ -116,9 +125,9 @@ def merge_openapi_specs():
 #    }
 #
     openapi.setdefault("tags", []).extend(m2eb_openapi["tags"])
-    openapi["paths"].update(m2eb_openapi["paths"])
+    openapi["paths"].update(prepend_paths("/api", m2eb_openapi["paths"]))
     openapi["components"]["schemas"].update(m2eb_openapi["components"]["schemas"])
-    openapi["servers"] = [{"url": app.root_path}]
+    openapi["servers"] = [{"url": "/"}]
 
     return openapi
 
