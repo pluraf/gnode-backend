@@ -1,0 +1,282 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "G-Node - OpenAPI 3.0",
+    "license": {
+      "name": "BSD 3-Clause",
+      "url": "https://spdx.org/licenses/BSD-3-Clause.html"
+    },
+    "version": "1.0.11"
+  },
+  "externalDocs": {
+    "description": "Find out more about G-Node",
+    "url": "https://docs.iotplan.io/gnode/index.html"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "channel",
+      "description": "Create, update, delete channels",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "https://docs.iotplan.io/gnode/channels.html"
+      }
+    }
+  ],
+  "paths": {
+    "/channel/": {
+      "get": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Returns all G-Node channels",
+        "operationId": "getChannels",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/channel/{channel_id}": {
+      "parameters": [
+        {
+          "name": "channel_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Returns G-Node channel by Id",
+        "operationId": "getchannel",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "channel not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Create channel",
+        "operationId": "createchannel",
+        "requestBody": {
+          "description": "Create a new channel",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "422": {
+            "description": "Invalid channel configuration"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Update channel config",
+        "operationId": "updatechannel",
+        "requestBody": {
+          "description": "Update existing channel",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "422": {
+            "description": "Invalid channel configuration"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Delete channel",
+        "operationId": "deletechannel",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "404": {
+            "description": "channel does not exist"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChannelBasic": {
+        "type": "object",
+        "properties": {
+          "chanid": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "msg_received": {
+            "type": "integer"
+          },
+          "msg_timestamp": {
+            "type": "integer"
+          }
+        }
+      },
+      "ChannelDetails": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChannelBasic"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "authtype": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "clientid": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ChannelUpdate": {
+        "type": "object",
+        "properties": {
+          "authtype": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "clientid": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChannelCreate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChannelUpdate"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "chanid": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ChannelList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ChannelBasic"
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "tokenUrl": "/api/auth/token",
+            "scopes": {
+              "read": "data",
+              "write": "data"
+            }
+          }
+        }
+      }
+    }
+  }
+}

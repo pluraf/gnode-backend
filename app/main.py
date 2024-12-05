@@ -61,8 +61,8 @@ app = get_application()
 static_prefix = ""
 
 # Uncomment the next two lines, if you want to test documentation running only gnode-backend
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-# static_prefix = "/api"
+app.mount("/static", StaticFiles(directory="static"), name="static")
+static_prefix = "/api"
 
 
 @app.get("/docs", include_in_schema=False)
@@ -109,8 +109,6 @@ def merge_openapi_specs():
 
     openapi["paths"] = prepend_paths("/api", openapi["paths"])
 
-    with open("app/openapi/m2eb_openapi.json", "r") as f:
-        m2eb_openapi = json.load(f)
 #
 #    openapi["info"] = {
 #        "title": "API",
@@ -124,10 +122,21 @@ def merge_openapi_specs():
 #        }
 #    }
 #
+    openapi["servers"] = [{"url": "/"}]
+
+    # Add M2E-Bridge
+    with open("app/openapi/m2eb_openapi.json", "r") as f:
+        m2eb_openapi = json.load(f)
     openapi.setdefault("tags", []).extend(m2eb_openapi["tags"])
     openapi["paths"].update(prepend_paths("/api", m2eb_openapi["paths"]))
     openapi["components"]["schemas"].update(m2eb_openapi["components"]["schemas"])
-    openapi["servers"] = [{"url": "/"}]
+
+    # Add M-Broker-C
+    with open("app/openapi/mqbc_openapi.json", "r") as f:
+        mqbc_openapi = json.load(f)
+    openapi["tags"].extend(mqbc_openapi["tags"])
+    openapi["paths"].update(prepend_paths("/api", mqbc_openapi["paths"]))
+    openapi["components"]["schemas"].update(mqbc_openapi["components"]["schemas"])
 
     return openapi
 
