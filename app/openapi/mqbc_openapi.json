@@ -265,14 +265,6 @@
         "allOf": [
           {
             "$ref": "#/components/schemas/ChannelUpdate"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "chanid": {
-                "type": "string"
-              }
-            }
           }
         ]
       },
