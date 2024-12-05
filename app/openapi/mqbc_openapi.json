@@ -187,6 +187,18 @@
   },
   "components": {
     "schemas": {
+      "Authtype": {
+        "type": "object",
+        "properties": {
+          "authtype": {
+            "type": "string",
+            "enum": [
+              "password",
+              "jwt_es256"
+            ]
+          }
+        }
+      },
       "ChannelBasic": {
         "type": "object",
         "properties": {
@@ -210,11 +222,11 @@
             "$ref": "#/components/schemas/ChannelBasic"
           },
           {
+            "$ref": "#/components/schemas/Authtype"
+          },
+          {
             "type": "object",
             "properties": {
-              "authtype": {
-                "type": "string"
-              },
               "username": {
                 "type": "string"
               },
@@ -226,21 +238,25 @@
         ]
       },
       "ChannelUpdate": {
-        "type": "object",
-        "properties": {
-          "authtype": {
-            "type": "string"
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Authtype"
           },
-          "username": {
-            "type": "string"
-          },
-          "clientid": {
-            "type": "string"
-          },
-          "disabled": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "clientid": {
+                "type": "string"
+              },
+              "disabled": {
+                "type": "boolean"
+              }
+            }
           }
-        }
+        ]
       },
       "ChannelCreate": {
         "allOf": [
