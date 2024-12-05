@@ -76,26 +76,3 @@ def delete_user(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
-
-
-@router.delete("/", response_model=dict)
-def delete_user(
-    userids: List[int],
-    current_user: Annotated[user_schema.User, Depends(authentication.get_current_active_user)],
-    db_session: Session = Depends(get_db),
-):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=400, detail="Unauthorized action")
-
-    deleted = []
-
-    for userid in userids:
-        if current_user.id == userid and (not current_user.is_admin):
-            continue
-        if userid == user_crud.get_first_user_id(db_session):
-            continue
-        db_user = user_crud.delete_user(db_session, user_id=userid)
-        if db_user:
-            deleted.append(db_user.id)
-
-    return {"deleted": deleted}

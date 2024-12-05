@@ -78,30 +78,21 @@ async def authbundle_list():
         session.close()
 
 
-@router.delete("/", response_model=dict, dependencies=[Depends(authenticate)])
-async def authbundle_delete(
-    authbundle_ids: List[str]
-):
+@router.delete("/{authbundle_id}", dependencies=[Depends(authenticate)])
+async def authbundle_delete(authbundle_id: str):
     session = sessionmaker(bind=auth_engine)()
-    deleted = []
-
-    for authbundle_id in authbundle_ids:
-        try:
-            is_deleted = session.query(Authbundle).filter(Authbundle.authbundle_id == authbundle_id).delete()
-
-            if is_deleted > 0:
-                deleted.append(authbundle_id)
-                session.commit()
-        except exc.IntegrityError:
-            session.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="One or more authentication bundles could not be deleted",
-            )
+    try:
+        session.query(Authbundle).filter(Authbundle.authbundle_id == authbundle_id).delete()
+        session.commit()
+    except exc.IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="One or more authentication bundles could not be deleted",
+        )
 
     session.close()
-
-    return {"deleted": deleted}
+    return Response(status_code=200)
 
 
 @router.put("/{authbundle_id}", dependencies=[Depends(authenticate)])
