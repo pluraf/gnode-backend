@@ -76,6 +76,8 @@ def is_valid_gateway(gateway, network_ip, subnet_mask):
         return False
 
 def validate_ipv4_settings(ipv4_settings):
+    if not isinstance(ipv4_settings, dict):
+        return False ,"Invalid ipv4_settings format"
     keys = ipv4_settings.keys()
     allowed_attr = ['address', 'netmask', 'dns', 'gateway']
     is_allowed_attr = all(key in allowed_attr for key in keys)
@@ -168,6 +170,8 @@ def get_current_active_connections(types = []):
     # nmcli connection type allowed values : adsl, bond, bond-slave, bridge, bridge-slave,
     # bluetooth, cdma, ethernet, gsm, infiniband, olpc-mesh, team, team-slave, vlan, wifi, wimax.
     relevant_types = []
+    if not isinstance(types, list):
+        return []
     if len(types) == 0:
         relevant_types = ['ethernet', 'wifi']
     else:
@@ -257,13 +261,13 @@ def connect_wifi(ssid, password):
 def set_network_settings(user_input):
     # Accepts input of format:
     # {
-    #    type: wifi
+    #    wifi_state:
+    #    type: 
     #    ssid:
     #    password:
     #    ipv4_method:
     #    ipv4_settings:
     # }
-    # command: nmcli device wifi connect <ssid> password <password>
 
     connection_type = user_input.get("type")
     ssid = user_input.get("ssid")

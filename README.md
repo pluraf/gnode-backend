@@ -38,6 +38,30 @@ sudo apt-get install libpq-dev
 
 To try out APIs, start fastapi application and navigate to
 http://localhost:8888/api/docs
+
+
+### How do I run tests? ###
+* Setup venv and install requirements
+
+    python -m venv venv
+
+    source venv/bin/activate
+
+    pip install -r requirements.txt
+    pip install -r requirements-dev.txt
+
+* Set environment variables 
+
+    source env.sh
+
+NOTE: The DB environment variables are changed when running tests. can be found in set_test_env_vars() function in conftest.py They are automatically changed back after test session ends.
+
+* Run pytest
+    pytest
+
+To run specific test file:
+    pytest <test_file_path>
+
 ### Contribution guidelines ###
 
 * Writing tests
