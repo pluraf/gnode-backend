@@ -31,7 +31,7 @@ router = APIRouter(tags=["authentication"])
 
 
 def authentication_status():
-    if not Settings().authentication:
+    if not Settings().api_authentication:
         raise HTTPException(
             status_code=status.HTTP_301_MOVED_PERMANENTLY,
             detail="Authentication is disabled; this endpoint is not available."
@@ -57,7 +57,7 @@ def authenticate_user(db_session, username: str, password: str):
 
 @router.api_route("/", methods=["GET"])
 async def login_for_access_token():
-    if not Settings().authentication:
+    if not Settings().api_authentication:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -67,7 +67,7 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db_session: Session = Depends(get_db)
 ) -> Token:
-    if not Settings().authentication:
+    if not Settings().api_authentication:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     user = authenticate_user(db_session, form_data.username, form_data.password)

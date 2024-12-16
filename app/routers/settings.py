@@ -45,7 +45,7 @@ async def settings_get():
         response["network_settings"] = {}
 
     settings = Settings()
-    response["authentication"] = settings.authentication
+    response["api_authentication"] = settings.api_authentication
     response["gcloud"] = settings.gcloud
 
     return JSONResponse(content=response)
@@ -87,9 +87,9 @@ async def settings_put(settings: dict[str, Any], _: str = Depends(authentication
         last_exc = e
 
     try:
-        v = settings.get("authentication")
+        v = settings.get("api_authentication")
         if v is not None:
-            Settings().authentication = v
+            Settings().api_authentication = v
     except Exception as e:
         last_exc = e
 

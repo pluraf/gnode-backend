@@ -53,7 +53,7 @@ async def authenticate(token: str = Depends(oauth2_scheme)):
                                 detail = "Token is not valid",
                                 headers = {"WWW-Authenticate": "Bearer"}
     )
-    if Settings().authentication:
+    if Settings().api_authentication:
         if not token:
             raise credentials_exception
         public_key = load_public_key_from_file()

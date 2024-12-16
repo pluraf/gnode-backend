@@ -7,7 +7,8 @@ from app.cleanup_db import run_cleanup
 from app.database_setup import SessionLocal
 
 @pytest.fixture(scope="function")
-def test_client():
+def test_client(mocker):
+    mock_settings_zmq_send = mocker.patch("app.components.settings.send_zmq_request", return_value = "ok")
     with TestClient(app) as test_client:
         yield test_client
     #cleanup db
