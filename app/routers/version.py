@@ -27,11 +27,11 @@ def get_version_from_zmq(address: str) -> str:
 
 
 def get_mqbc_api_version() -> str:
-    return get_version_from_zmq(app_settings.ZMQ_MQBC_ENDPOINT)
+    return get_version_from_zmq(app_settings.ZMQ_MQBC_SOCKET)
 
 
 def get_m2eb_api_version() -> str:
-    return get_version_from_zmq(app_settings.ZMQ_M2EB_ENDPOINT)
+    return get_version_from_zmq(app_settings.ZMQ_M2EB_SOCKET)
 
 
 def get_serial_number() -> str:
