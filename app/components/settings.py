@@ -80,6 +80,10 @@ def init_settings_table():
                 # Letting execution continue in case of error
                 # TODO: Change print to log later
                 print("Error initializing gcloud settings!")
+    else:
+        # if api_authentication is set to false, ensure status is reflected in m2e bridge and m-brocker-c
+        if not settings.api_authentication:
+            send_zmq_set_auth_req(False, False)
 
 def send_zmq_set_auth_req(old_api_auth, new_api_auth):
     zmq_command = "set_api_auth_on" if new_api_auth else "set_api_auth_off"
