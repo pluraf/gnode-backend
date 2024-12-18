@@ -39,7 +39,7 @@ class Settings:
     @property
     def gcloud(self):
         socket = zmq_context.socket(zmq.REQ)
-        socket.setsockopt(zmq.RCVTIMEO, 1000)
+        socket.setsockopt(zmq.RCVTIMEO, 4000)
         socket.setsockopt(zmq.LINGER, 0)
         socket.connect(app_settings.ZMQ_GCLIENT_SOCKET)
         socket.send_string("info")
