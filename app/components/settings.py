@@ -1,12 +1,15 @@
 import subprocess
+import zmq
+import json
+
+import app.settings as app_settings
 
 from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
 
 from app.models.settings import SettingsModel
 from app.database_setup import default_engine
-import app.settings as app_settings
-from app.utils import get_mode, GNodeMode, send_zmq_request
+from app.utils import get_mode, GNodeMode, send_zmq_request, get_zmq_socket
 
 class Settings:
     def __init__(self):
@@ -36,27 +39,42 @@ class Settings:
 
     @property
     def gcloud(self):
-        return self._settings.gcloud
+        info_str = send_zmq_request(app_settings.ZMQ_GCLIENT_SOCKET, "info", "{}", rcvtime = 4000 )
+        info = json.loads(info_str)
+        rep = {
+            "https": None,
+            "ssh": None
+        }
+        for mapping in info:
+            if mapping[0] == 443:
+                rep["https"] = mapping[0]
+            elif mapping[2] == 22:
+                rep["ssh"] = mapping[0]
+        return rep
 
     @gcloud.setter
     def gcloud(self, value):
-        session = sessionmaker(bind=default_engine)()
         try:
-            if value:
-                subprocess.run(["sudo", "/bin/systemctl", "start", app_settings.GCLOUD_SERVICE_NAME], check=True)
-            else:
-                subprocess.run(["sudo", "/bin/systemctl", "stop", app_settings.GCLOUD_SERVICE_NAME], check=True)
-            self._settings.gcloud = value
-            session.add(self._settings)
-            session.commit()
-            self._settings = session.query(SettingsModel).first()
-        except exc.SQLAlchemyError:
-            session.rollback()
-            raise
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Error changing g-cloud status")
+            socket = get_zmq_socket(app_settings.ZMQ_GCLIENT_SOCKET, 4000)
+            if socket is None:
+                raise RuntimeError("Can not connect to gclient socket")
+            commands = []
+
+            https = value.get("https")
+            if https is not None:
+                commands.append("https_on" if https else "https_off")
+
+            ssh = value.get("ssh")
+            if ssh is not None:
+                commands.append("ssh_on" if ssh else "ssh_off")
+
+            for command in commands:
+                socket.send_string(command)
+                if socket.recv_string() != "OK":
+                    raise RuntimeError("Can not execute command %s" % command)
         finally:
-            session.close()
+            if socket is not None:
+                socket.close()
 
 def init_settings_table():
     session = sessionmaker(bind=default_engine)()
@@ -68,16 +86,6 @@ def init_settings_table():
         session.close()
         #no need to reset api_auth value in case of failure since it is initialization
         send_zmq_set_auth_req(settings.api_authentication, settings.api_authentication)
-        if get_mode() == GNodeMode.PHYSICAL :
-            try:
-                if (settings.gcloud):
-                    subprocess.run(["sudo", "/bin/systemctl", "start", app_settings.GCLOUD_SERVICE_NAME], check=True)
-                else:
-                    subprocess.run(["sudo", "/bin/systemctl", "stop", app_settings.GCLOUD_SERVICE_NAME], check=True)
-            except subprocess.CalledProcessError:
-                # Letting execution continue in case of error
-                # TODO: Change print to log later
-                print("Error initializing gcloud settings!")
     else:
         # if api_authentication is set to false, ensure status is reflected in m2e bridge and m-brocker-c
         if not settings.api_authentication:
@@ -86,11 +94,12 @@ def init_settings_table():
 def send_zmq_set_auth_req(old_api_auth, new_api_auth):
     zmq_command = "set_api_auth_on" if new_api_auth else "set_api_auth_off"
     reset_command = "set_api_auth_on" if old_api_auth else "set_api_auth_off"
-    mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_ENDPOINT, zmq_command, "fail" )
+    mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, zmq_command, "fail" )
     if mqbc_resp != "ok":
         return False
-    m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_ENDPOINT, zmq_command, "fail" )
+    m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, zmq_command, "fail" )
     if m2eb_resp != "ok":
-        mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_ENDPOINT, reset_command, "fail" )
+        mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, reset_command, "fail" )
         return False
     return True
+

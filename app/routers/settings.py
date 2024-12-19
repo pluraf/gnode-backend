@@ -21,7 +21,7 @@ async def settings_get():
     socket = zmq_context.socket(zmq.REQ)
     socket.setsockopt(zmq.RCVTIMEO, 500)
     socket.setsockopt(zmq.LINGER, 0)
-    socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
+    socket.connect(app_settings.ZMQ_MQBC_SOCKET)
 
     response = {}
 
@@ -52,7 +52,7 @@ async def settings_get():
 
 
 @router.put("/", dependencies=[Depends(authenticate)])
-async def settings_put(settings: dict[str, Any], _: str = Depends(authentication.authenticate)):
+async def settings_put(settings: dict[str, Any]):
     # TODO: Move each block to a dedicated function (class?)
     last_exc = None
     try:
@@ -61,7 +61,7 @@ async def settings_put(settings: dict[str, Any], _: str = Depends(authentication
             socket = zmq_context.socket(zmq.REQ)
             socket.setsockopt(zmq.RCVTIMEO, 500)
             socket.setsockopt(zmq.LINGER, 0)
-            socket.connect(app_settings.ZMQ_MQBC_ENDPOINT)
+            socket.connect(app_settings.ZMQ_MQBC_SOCKET)
             try:
                 socket.send(b'\x01' if v else b'\x00')
                 socket.recv()
