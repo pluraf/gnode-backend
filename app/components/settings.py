@@ -31,8 +31,6 @@ class Settings:
         except exc.SQLAlchemyError:
             session.rollback()
             raise
-        except RuntimeError as e:
-            raise
         finally:
             session.close()
 
