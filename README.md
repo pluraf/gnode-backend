@@ -11,6 +11,7 @@ This README would normally document whatever steps are necessary to get your app
 ### How do I get set up? ###
 
 * Setup venv and install requirements
+```
 
     python -m venv venv
 
@@ -18,13 +19,20 @@ This README would normally document whatever steps are necessary to get your app
 
     pip install -r requirements.txt
 
+```
+
 * set db parameters in dev.env file and export them using env.sh
 
+```
+
     source env.sh
+```
 
 * start fastapi application
+```
 
     uvicorn app.main:app --reload --port 8888
+```
 
 ---
 
@@ -32,7 +40,9 @@ Before commit run "black ./app"
 
 ---
 To install psycopg2 first install:
+```
 sudo apt-get install libpq-dev
+```
 
 ---
 
@@ -43,6 +53,8 @@ http://localhost:8888/api/docs
 ### How do I run tests? ###
 * Setup venv and install requirements
 
+```
+
     python -m venv venv
 
     source venv/bin/activate
@@ -51,15 +63,23 @@ http://localhost:8888/api/docs
 
     pip install -r requirements-dev.txt
 
+
+```
+
 * Set environment variables 
 
+```
     source env.sh
+
+```
 
 NOTE: The DB environment variables are changed when running tests. can be found in set_test_env_vars() function in conftest.py They are automatically changed back after test session ends.
 
 * Run pytest
 
+```
     pytest
+```
 
 To run specific test file:
 
