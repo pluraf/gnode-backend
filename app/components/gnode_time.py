@@ -76,6 +76,8 @@ def set_gnode_time(user_input):
             raise HTTPException(status_code = 422, detail = "Missing required field!")
         set_time_auto(ntp_server, time_zone)
 
+    run_privileged_command(["hwclock", "--systohc", "--utc"])
+
 
 def get_gnode_time():
     time_conf = run_command(["timedatectl", "show"])
