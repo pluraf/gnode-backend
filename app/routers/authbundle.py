@@ -115,9 +115,11 @@ async def authbundle_delete(authbundle_id: str):
 @router.put("/{authbundle_id}", dependencies=[Depends(authenticate)])
 async def authbundle_edit(
     authbundle_id: str,
+    service_type: str = Form(...),
+    auth_type: str = Form(...),
     username: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
-    description: Optional[str] = Form(None),
+    description: Optional[str] = Form(""),
     keyfile: Optional[UploadFile] = File(None)
 ):
     session = sessionmaker(bind=auth_engine)()
@@ -133,12 +135,15 @@ async def authbundle_edit(
         authbundle.username = username
     if password:
         authbundle.password = password
-    if description:
-        authbundle.description = description
+    authbundle.description = description
     if keyfile:
         content = await keyfile.read()
         authbundle.keyname = keyfile.filename
         authbundle.keydata = content
+    if service_type:
+        authbundle.service_type = service_type
+    if auth_type:
+        authbundle.auth_type = auth_type
 
     try:
         session.commit()
