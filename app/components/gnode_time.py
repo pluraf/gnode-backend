@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
 
 from app.utils import get_mode, run_privileged_command, run_command
+from app.utils import GNodeMode
 
 
 def delete_old_ntp_servers():
@@ -72,7 +73,7 @@ def set_time_auto(ntp_server, time_zone):
 
 
 def set_gnode_time(user_input):
-    if get_mode() == "virtual":
+    if get_mode() == GNodeMode.VIRTUAL:
         raise HTTPException(
             status_code=status.HTTP_301_MOVED_PERMANENTLY,
             detail="Time settings are not available in virtual mode."
@@ -97,18 +98,22 @@ def set_gnode_time(user_input):
 
 
 def get_gnode_time():
-    time_conf = run_command(["timedatectl", "show"])
-    for line in time_conf.splitlines():
-        try:
-            key, value = map(str.strip, line.split("="))
-        except IndexError:
-            continue
-        if key == "NTP":  # Detect current mode
-            auto = value == "yes"
-        elif key == "Timezone":  # Detect current timezone
-            current_timezone = value
+    if get_mode() == GNodeMode.VIRTUAL:
+        time_conf = run_command(["ls", "-l", "/etc/localtime"])
+        current_timezone = time_conf.split("/zoneinfo/")[1]
+        auto = False
+    else:
+        time_conf = run_command(["timedatectl", "show"])
+        for line in time_conf.splitlines():
+            try:
+                key, value = map(str.strip, line.split("="))
+            except IndexError:
+                continue
+            if key == "NTP":  # Detect current mode
+                auto = value == "yes"
+            elif key == "Timezone":  # Detect current timezone
+                current_timezone = value
     now = datetime.now(ZoneInfo(current_timezone))
-    # Return summary
     return {
         "timestamp": now.timestamp(),
         "iso8601": now.strftime("%Y-%m-%dT%H:%M:%S%z"),
