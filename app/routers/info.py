@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends
 from app.routers import version
 from app.utils import get_mode
 from app.auth import authenticate
+from app.components import gnode_time
 
 
 router = APIRouter(tags=["info"])
@@ -38,5 +39,6 @@ async def get_info():
     return {
         "mode": mode,
         "version": api_versions,
-        "serial_number": gnode_serial_number
+        "serial_number": gnode_serial_number,
+        "time": gnode_time.get_gnode_time()
     }
