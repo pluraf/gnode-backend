@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-import subprocess
+import cbor2
 import zmq
 import json
 
@@ -56,12 +56,16 @@ class Settings:
 
     @property
     def gcloud(self):
-        info_str = send_zmq_request(app_settings.ZMQ_GCLIENT_SOCKET, "info", "{}", rcvtime = 4000 )
-        info = json.loads(info_str)
         rep = {
             "https": None,
             "ssh": None
         }
+        try:
+            info_str = send_zmq_request(app_settings.ZMQ_GCLIENT_SOCKET, "info")
+            info = json.loads(info_str)
+        except zmq.error.ZMQError:
+            return rep
+
         for mapping in info:
             if mapping[0] == 443:
                 rep["https"] = mapping[0]
@@ -93,6 +97,7 @@ class Settings:
             if socket is not None:
                 socket.close()
 
+
 def init_settings_table():
     session = sessionmaker(bind=default_engine)()
     settings = session.query(SettingsModel).first()
@@ -108,14 +113,17 @@ def init_settings_table():
         if not settings.api_authentication:
             send_zmq_set_auth_req(False, False)
 
+
 def send_zmq_set_auth_req(old_api_auth, new_api_auth):
     zmq_command = "set_api_auth_on" if new_api_auth else "set_api_auth_off"
     reset_command = "set_api_auth_on" if old_api_auth else "set_api_auth_off"
-    mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, zmq_command, "fail" )
-    if mqbc_resp != "ok":
+    request = cbor2.dumps(['PUT', zmq_command])
+    mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+    if mqbc_resp != b"ok":
         return False
-    m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, zmq_command, "fail" )
-    if m2eb_resp != "ok":
-        mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, reset_command, "fail" )
+    m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, request)
+    if m2eb_resp != b"ok":
+        request = cbor2.dumps(['PUT', reset_command])
+        mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
         return False
     return True

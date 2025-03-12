@@ -16,31 +16,25 @@
 
 
 import zmq
+import cbor2
 
 from fastapi import APIRouter, Depends
 
 import app.settings as app_settings
 
-from app.zmq_setup import zmq_context
+from app.utils import send_zmq_request
 from app.auth import authenticate
 
 
 router = APIRouter(tags=["info"])
 
 
-def get_version_from_zmq(address: str) -> str:
-    socket = zmq_context.socket(zmq.REQ)
-    socket.setsockopt(zmq.RCVTIMEO, 500)
-    socket.setsockopt(zmq.LINGER, 0)
+def get_version_from_zmq(socket) -> str:
+    request = cbor2.dumps(['GET', 'api_version'])
     try:
-        socket.connect(address)
-        socket.send_string("api_version")
-        version = socket.recv_string()
+        return send_zmq_request(socket, request).decode()
     except zmq.error.ZMQError as e:
-        version = "xxxx"
-    finally:
-        socket.close()
-    return version
+        return "xxx"
 
 
 def get_mqbc_api_version() -> str:

@@ -23,8 +23,31 @@ from app.utils import send_zmq_request
 
 
 class Channel:
+    _CACHE = {}
+
+
     def __init__(self):
         pass
+
+
+    def _get_channel_type(self, channel_id):
+        channel = None
+        try:
+            channel = self._CACHE[channel_id]
+        except KeyError:
+            self.list()
+            channel = self._CACHE.get(channel_id)
+        try:
+            return channel["type"]
+        except (TypeError, KeyError):
+            raise KeyError(channel_id)
+
+    def _get_socket(self, channel_type):
+        if channel_type == "mqtt":
+            return app_settings.ZMQ_MQBC_SOCKET
+        else:
+            return app_settings.ZMQ_M2EB_SOCKET
+
 
     def list(self):
         request = cbor2.dumps(['GET', 'channel/'])
@@ -36,27 +59,56 @@ class Channel:
 
         for channel in m_channels:
             channel["type"] = "mqtt"
+            self._CACHE[channel["id"]] = channel
         for channel in h_channels:
             channel["type"] = "http"
+            self._CACHE[channel["id"]] = channel
 
         return json.dumps(m_channels + h_channels)
 
 
     def get(self, channel_id):
+        try:
+            type = self._get_channel_type(channel_id)
+        except KeyError:
+            return None
+
         request = cbor2.dumps(['GET', 'channel/' + channel_id])
-        channel = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
-        
+        socket = app_settings.ZMQ_MQBC_SOCKET if type == "mqtt" else app_settings.ZMQ_M2EB_SOCKET
+        return send_zmq_request(socket, request)
+
 
     def create(self, channel_id, payload):
-        request = cbor2.dumps(['POST', 'channel/' + channel_id, payload])
-        return send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+        try:
+            channel_type = payload["type"]
+        except KeyError:
+            raise ValueError("Missing channel type")
+
+        request = cbor2.dumps(['POST', 'channel/' + channel_id, json.dumps(payload)])
+        socket = self._get_socket(channel_type)
+        return send_zmq_request(socket, request)
+
 
     def update(self, channel_id, payload):
+        try:
+            channel_type = self._get_channel_type(channel_id)
+        except KeyError:
+            raise KeyError("Channel not found")
+
+        payload = payload if type(payload) in (str, bytes) else json.dumps(payload)
         request = cbor2.dumps(['PUT', 'channel/' + channel_id, payload])
-        r = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
-        print(r, type(r))
-        return r
+        socket = self._get_socket(channel_type)
+        return send_zmq_request(socket, request)
+
 
     def delete(self, channel_id):
+        try:
+            channel_type = self._get_channel_type(channel_id)
+        except KeyError:
+            raise KeyError("Channel not found")
         request = cbor2.dumps(['DELETE', 'channel/' + channel_id])
-        return send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+        socket = self._get_socket(channel_type)
+        try:
+            return send_zmq_request(socket, request)
+        finally:
+            self._CACHE.pop(channel_id, None)

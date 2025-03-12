@@ -16,6 +16,7 @@
 
 
 import zmq
+import cbor2
 
 from fastapi import APIRouter, Response, HTTPException, Depends, status
 from fastapi.responses import JSONResponse

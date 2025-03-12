@@ -15,7 +15,9 @@
 # limitations under the License.
 
 
-from fastapi import APIRouter, Depends, Form, Request
+import json
+
+from fastapi import status, APIRouter, Depends, Body, Request, HTTPException
 from fastapi.responses import JSONResponse, Response, PlainTextResponse
 from typing import Optional
 
@@ -35,24 +37,35 @@ async def list_channels():
 
 @router.get("/{channel_id}", dependencies=[Depends(authenticate)])
 async def get_channel(channel_id: str):
-    return Response(content=Channel().get(channel_id), media_type="application/json")
+    channel = Channel().get(channel_id)
+    if channel is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Channel not found"
+        )
+    return Response(content=channel, media_type="application/json")
 
 
 @router.post("/{channel_id}", dependencies=[Depends(authenticate)])
-async def create_channel(channel_id: str, request: Request):
-    payload = await request.body()
-    response_phrase = Channel().create(channel_id, payload)
+async def create_channel(channel_id: str, payload: dict = Body(...)):
+    try:
+        response_phrase = Channel().create(channel_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if response_phrase:
-        return PlainTextResponse(status_code=400, content=response_phrase)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response_phrase)
     return Response()
 
 
 @router.put("/{channel_id}", dependencies=[Depends(authenticate)])
 async def update_channel(channel_id: str, request: Request):
     payload = await request.body()
-    response_phrase = Channel().update(channel_id, payload)
+    try:
+        response_phrase = Channel().update(channel_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if response_phrase:
-        return PlainTextResponse(status_code=400, content=response_phrase)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response_phrase)
     return Response()
 
 

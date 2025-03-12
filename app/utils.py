@@ -47,17 +47,14 @@ def run_privileged_command(command, shell=False):
     return result.stdout.strip()
 
 
-def send_zmq_request(address, command, is_resp_str = True, rcvtime = 500):
+def send_zmq_request(address, command, rcvtime = 1000):
+    command = command if type(command) == bytes else command.encode()
     socket = get_zmq_socket(address, rcvtime)
     try:
         socket.send(command)
-        if is_resp_str:
-            resp = socket.recv_string()
-        else:
-            resp = socket.recv()
+        return socket.recv()
     finally:
         socket.close()
-    return resp
 
 
 def get_zmq_socket(address,rcvtime = 500):
