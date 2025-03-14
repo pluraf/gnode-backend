@@ -18,6 +18,9 @@
 import json
 import cbor2
 
+from zmq.error import ZMQError;
+from json.decoder import JSONDecodeError
+
 import app.settings as app_settings
 from app.utils import send_zmq_request
 
@@ -51,11 +54,16 @@ class Channel:
 
     def list(self):
         request = cbor2.dumps(['GET', 'channel/'])
-        m_channels = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
-        h_channels = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, request)
-
-        m_channels = json.loads(m_channels)
-        h_channels = json.loads(h_channels)
+        try:
+            m_channels = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+            m_channels = json.loads(m_channels)
+        except (ZMQError, JSONDecodeError):
+            m_channels = []
+        try:
+            h_channels = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, request)
+            h_channels = json.loads(h_channels)
+        except (ZMQError, JSONDecodeError):
+            h_channels = []
 
         for channel in m_channels:
             channel["type"] = "mqtt"
@@ -69,13 +77,16 @@ class Channel:
 
     def get(self, channel_id):
         try:
-            type = self._get_channel_type(channel_id)
+            channel_type = self._get_channel_type(channel_id)
         except KeyError:
             return None
 
         request = cbor2.dumps(['GET', 'channel/' + channel_id])
-        socket = app_settings.ZMQ_MQBC_SOCKET if type == "mqtt" else app_settings.ZMQ_M2EB_SOCKET
-        return send_zmq_request(socket, request)
+        socket = app_settings.ZMQ_MQBC_SOCKET if channel_type == "mqtt" else app_settings.ZMQ_M2EB_SOCKET
+        response = send_zmq_request(socket, request)
+        if type(response) == bytes:
+            response = response.decode()
+        return response
 
 
     def create(self, channel_id, payload):
@@ -86,7 +97,10 @@ class Channel:
 
         request = cbor2.dumps(['POST', 'channel/' + channel_id, json.dumps(payload)])
         socket = self._get_socket(channel_type)
-        return send_zmq_request(socket, request)
+        response = send_zmq_request(socket, request)
+        if type(response) == bytes:
+            response = response.decode()
+        return response
 
 
     def update(self, channel_id, payload):
@@ -98,7 +112,10 @@ class Channel:
         payload = payload if type(payload) in (str, bytes) else json.dumps(payload)
         request = cbor2.dumps(['PUT', 'channel/' + channel_id, payload])
         socket = self._get_socket(channel_type)
-        return send_zmq_request(socket, request)
+        response = send_zmq_request(socket, request)
+        if type(response) == bytes:
+            return response.decode()
+        return response
 
 
     def delete(self, channel_id):
@@ -109,6 +126,9 @@ class Channel:
         request = cbor2.dumps(['DELETE', 'channel/' + channel_id])
         socket = self._get_socket(channel_type)
         try:
-            return send_zmq_request(socket, request)
+            response = send_zmq_request(socket, request)
+            if type(response) == bytes:
+                return response.decode()
+            return response
         finally:
             self._CACHE.pop(channel_id, None)
