@@ -55,7 +55,7 @@ def get_systemd_service_status(service_name):
 
 def get_supervisor_service_status(service_name):
     try:
-        resp = run_command(['supervisorctl', 'show', service_name])
+        resp = run_command(['supervisorctl', 'status', service_name])
         status = resp.split()[1]
         if status == "RUNNING":
             return ServiceStatus.RUNNING
