@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 from app.auth import authenticate
 from app.components import network_connections
 from app.components.status import get_service_status
+from app.utils import get_mode, GNodeMode
 
 import app.settings as app_settings
 
@@ -37,5 +38,6 @@ async def status_get():
         "m2eb": get_service_status(app_settings.M2EB_SERVICE_NAME),
         "gcloud_client": get_service_status(app_settings.GCLOUD_SERVICE_NAME)
     }
-    response["network"] = network_connections.get_network_status()
+    if get_mode() == GNodeMode.PHYSICAL:
+        response["network"] = network_connections.get_network_status()
     return JSONResponse(content=response)
