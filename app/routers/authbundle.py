@@ -51,7 +51,7 @@ async def authbundle_create(
     if not authbundle_id:
         authbundle_id = uuid.uuid4().hex
 
-    autbundle = Authbundle(
+    authbundle = Authbundle(
         authbundle_id=authbundle_id,
         service_type=service_type,
         auth_type=auth_type,
@@ -62,14 +62,14 @@ async def authbundle_create(
 
     if (keyfile):
         content = await keyfile.read()
-        autbundle.keyname=keyfile.filename
-        autbundle.keydata=content
+        authbundle.keyname=keyfile.filename
+        authbundle.keydata=content
 
     session = sessionmaker(bind=auth_engine)()
-    session.add(autbundle)
+    session.add(authbundle)
     try:
         session.commit()
-        authbundle_id = autbundle.authbundle_id
+        authbundle_id = authbundle.authbundle_id
     except exc.IntegrityError:
         session.rollback()
         raise HTTPException(

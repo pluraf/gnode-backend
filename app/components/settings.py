@@ -115,15 +115,18 @@ def init_settings_table():
 
 
 def send_zmq_set_auth_req(old_api_auth, new_api_auth):
-    zmq_command = "set_api_auth_on" if new_api_auth else "set_api_auth_off"
-    reset_command = "set_api_auth_on" if old_api_auth else "set_api_auth_off"
-    request = cbor2.dumps(['PUT', zmq_command])
-    mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
-    if mqbc_resp != b"ok":
-        return False
-    m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, request)
-    if m2eb_resp != b"ok":
-        request = cbor2.dumps(['PUT', reset_command])
+    try:
+        zmq_command = "set_api_auth_on" if new_api_auth else "set_api_auth_off"
+        reset_command = "set_api_auth_on" if old_api_auth else "set_api_auth_off"
+        request = cbor2.dumps(['PUT', zmq_command])
         mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+        if mqbc_resp != b"ok":
+            return False
+        m2eb_resp = send_zmq_request(app_settings.ZMQ_M2EB_SOCKET, request)
+        if m2eb_resp != b"ok":
+            request = cbor2.dumps(['PUT', reset_command])
+            mqbc_resp = send_zmq_request(app_settings.ZMQ_MQBC_SOCKET, request)
+            return False
+        return True
+    except Exception:
         return False
-    return True

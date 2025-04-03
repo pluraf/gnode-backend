@@ -38,6 +38,7 @@ from app.zmq_setup import zmq_context
 import app.models.authbundle
 import app.models.user
 import app.models.settings
+import app.models.meta_data
 
 
 @asynccontextmanager
