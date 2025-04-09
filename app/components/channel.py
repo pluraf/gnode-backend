@@ -22,7 +22,8 @@ from zmq.error import ZMQError;
 from json.decoder import JSONDecodeError
 
 import app.settings as app_settings
-from app.utils import send_zmq_request
+from app.utils import send_zmq_request, run_privileged_command
+from app.components import status
 
 
 class Channel:
@@ -34,6 +35,10 @@ class Channel:
 
 
     def _get_channel_type(self, channel_id):
+        # Special case
+        if channel_id in ("lora_basic_station_ws", "lora_basic_station_wss"):
+            return "lora"
+
         channel = None
         try:
             channel = self._CACHE[channel_id]
@@ -48,8 +53,9 @@ class Channel:
     def _get_socket(self, channel_type):
         if channel_type == "mqtt":
             return app_settings.ZMQ_MQBC_SOCKET
-        else:
+        elif channel_type == "http":
             return app_settings.ZMQ_M2EB_SOCKET
+        raise KeyError("Unknown channel type!")
 
 
     def list(self):
@@ -72,7 +78,23 @@ class Channel:
             channel["type"] = "http"
             self._CACHE[channel["id"]] = channel
 
-        return json.dumps(m_channels + h_channels)
+        # Special case for LoRaWAN (temp)
+        l_channels = [
+            {
+                "id": "lora_basic_station_ws",
+                "type": "lora",
+                "state": "CONFIGURED",
+                "enabled": status.get_service_status("chirpstack-gateway-bridge-ws") == status.ServiceStatus.RUNNING
+            },
+            {
+                "id": "lora_basic_station_wss",
+                "type": "lora",
+                "state": "CONFIGURED",
+                "enabled": status.get_service_status("chirpstack-gateway-bridge-wss") == status.ServiceStatus.RUNNING
+            }
+        ]
+
+        return json.dumps(m_channels + h_channels + l_channels)
 
 
     def get(self, channel_id):
@@ -81,8 +103,33 @@ class Channel:
         except KeyError:
             return None
 
+        # Special case for LoRaWAN (temp)
+        if channel_type == "lora":
+            if channel_id == "lora_basic_station_ws":
+                return json.dumps({
+                    "id": "lora_basic_station_ws",
+                    "type": "lora",
+                    "authtype": "none",
+                    "state": "CONFIGURED",
+                    "enabled": status.get_service_status("chirpstack-gateway-bridge-ws") == status.ServiceStatus.RUNNING,
+                    "ports": (
+                        {"port": 3001, "descr": "TCP"},
+                    )
+                })
+            elif channel_id == "lora_basic_station_wss":
+                return json.dumps({
+                    "id": "lora_basic_station_wss",
+                    "type": "lora",
+                    "authtype": "none",
+                    "state": "CONFIGURED",
+                    "enabled": status.get_service_status("chirpstack-gateway-bridge-wss") == status.ServiceStatus.RUNNING,
+                    "ports": (
+                        {"port": 8887, "descr": "TLS"},
+                    )
+                })
+
         request = cbor2.dumps(['GET', 'channel/' + channel_id])
-        socket = app_settings.ZMQ_MQBC_SOCKET if channel_type == "mqtt" else app_settings.ZMQ_M2EB_SOCKET
+        socket = self._get_socket(channel_type)
         response = send_zmq_request(socket, request)
         if type(response) == bytes:
             response = response.decode()
@@ -108,6 +155,20 @@ class Channel:
             channel_type = self._get_channel_type(channel_id)
         except KeyError:
             raise KeyError("Channel not found")
+
+        # Special case for LoRaWAN (temp)
+        if channel_type == "lora":
+            if channel_id == "lora_basic_station_ws":
+                if json.loads(payload)["enabled"]:
+                    run_privileged_command(['systemctl', 'start', 'chirpstack-gateway-bridge-ws'])
+                else:
+                    run_privileged_command(['systemctl', 'stop', 'chirpstack-gateway-bridge-ws'])
+            elif channel_id == "lora_basic_station_wss":
+                if json.loads(payload)["enabled"]:
+                    run_privileged_command(['systemctl', 'start', 'chirpstack-gateway-bridge-wss'])
+                else:
+                    run_privileged_command(['systemctl', 'stop', 'chirpstack-gateway-bridge-wss'])
+            return ""
 
         payload = payload if type(payload) in (str, bytes) else json.dumps(payload)
         request = cbor2.dumps(['PUT', 'channel/' + channel_id, payload])

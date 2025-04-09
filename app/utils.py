@@ -47,7 +47,7 @@ def run_privileged_command(command, shell=False):
     return result.stdout.strip()
 
 
-def send_zmq_request(address, command, rcvtime = 1000):
+def send_zmq_request(address, command, rcvtime = 200):
     command = command if type(command) == bytes else command.encode()
     socket = get_zmq_socket(address, rcvtime)
     try:
@@ -57,7 +57,7 @@ def send_zmq_request(address, command, rcvtime = 1000):
         socket.close()
 
 
-def get_zmq_socket(address,rcvtime = 500):
+def get_zmq_socket(address, rcvtime = 200):
     socket = zmq_context.socket(zmq.REQ)
     socket.setsockopt(zmq.RCVTIMEO, rcvtime)
     socket.setsockopt(zmq.LINGER, 0)
