@@ -27,6 +27,7 @@ from app.routers import version
 from app.routers import info
 from app.routers import timezones
 from app.routers import channel
+from app.routers import converter
 
 import app.settings as app_settings
 
@@ -48,3 +49,4 @@ router.include_router(status.router, prefix="/status")
 router.include_router(info.router, prefix="/info")
 router.include_router(timezones.router, prefix="/timezones")
 router.include_router(channel.router, prefix="/channel")
+router.include_router(converter.router, prefix="/converter")
