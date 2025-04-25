@@ -160,14 +160,18 @@ class Channel:
         if channel_type == "lora":
             if channel_id == "lora_basic_station_ws":
                 if json.loads(payload)["enabled"]:
+                    run_privileged_command(['systemctl', 'enable', 'chirpstack-gateway-bridge-ws'])
                     run_privileged_command(['systemctl', 'start', 'chirpstack-gateway-bridge-ws'])
                 else:
                     run_privileged_command(['systemctl', 'stop', 'chirpstack-gateway-bridge-ws'])
+                    run_privileged_command(['systemctl', 'disable', 'chirpstack-gateway-bridge-ws'])
             elif channel_id == "lora_basic_station_wss":
                 if json.loads(payload)["enabled"]:
+                    run_privileged_command(['systemctl', 'enable', 'chirpstack-gateway-bridge-wss'])
                     run_privileged_command(['systemctl', 'start', 'chirpstack-gateway-bridge-wss'])
                 else:
                     run_privileged_command(['systemctl', 'stop', 'chirpstack-gateway-bridge-wss'])
+                    run_privileged_command(['systemctl', 'disable', 'chirpstack-gateway-bridge-wss'])
             return ""
 
         payload = payload if type(payload) in (str, bytes) else json.dumps(payload)
