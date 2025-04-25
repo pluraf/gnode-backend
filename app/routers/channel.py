@@ -46,6 +46,11 @@ async def get_channel(channel_id: str):
     return Response(content=channel, media_type="application/json")
 
 
+@router.post("/", dependencies=[Depends(authenticate)])
+async def create_channel(_: dict = Body(...)):
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing channel ID!")
+
+
 @router.post("/{channel_id}", dependencies=[Depends(authenticate)])
 async def create_channel(channel_id: str, payload: dict = Body(...)):
     try:
