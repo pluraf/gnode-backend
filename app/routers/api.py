@@ -40,7 +40,7 @@ async def retrieve_home():
 
 
 router.include_router(users.router, prefix="/user")
-router.include_router(authentication.router, prefix="/auth/token")
+router.include_router(authentication.router, prefix="/auth")
 router.include_router(authbundle.router, prefix="/authbundle")
 router.include_router(ca.router, prefix="/ca")
 router.include_router(settings.router, prefix="/settings")

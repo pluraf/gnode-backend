@@ -174,6 +174,5 @@ async def authbundle_details(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Authentication bundle not found"
         )
-
     session.close()
     return authbundle

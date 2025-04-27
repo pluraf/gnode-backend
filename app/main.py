@@ -40,6 +40,7 @@ import app.models.user
 import app.models.settings
 import app.models.meta_data
 import app.models.converter
+import app.models.api_token
 
 
 @asynccontextmanager

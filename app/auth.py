@@ -15,8 +15,9 @@
 # limitations under the License.
 
 
-import jwt
 import os
+import jwt
+import uuid
 
 from datetime import datetime, timezone, timedelta
 
@@ -29,8 +30,12 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidKey
 
+from sqlalchemy.orm import sessionmaker
+
 import app.settings as settings
 from app.components.settings import Settings
+from app.database_setup import default_engine
+from app.models.api_token import ApiToken
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL, auto_error=False)
@@ -64,6 +69,18 @@ def load_public_key_from_file():
         raise RuntimeError(f"GNODE_PUBLIC_KEY: Invalid PEM file or key format. {e}")
 
 
+def verify_api_token(token):
+    if not token:
+        raise ValueError("token is invalid")
+
+    session = sessionmaker(bind=default_engine)()
+    api_token = session.query(ApiToken).filter(ApiToken.token == token).first()
+    session.close()
+
+    if not api_token or api_token.state != 1 or api_token.expired:
+        raise InvalidTokenError("token not accepted")
+
+
 async def authenticate(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
                                 status_code = status.HTTP_401_UNAUTHORIZED,
@@ -73,23 +90,39 @@ async def authenticate(token: str = Depends(oauth2_scheme)):
     if Settings().api_authentication:
         if not token:
             raise credentials_exception
-        public_key = load_public_key_from_file()
         try:
-            return jwt.decode(token, public_key, algorithms=settings.ALGORITHM)
-        except InvalidTokenError:
-            raise credentials_exception
-    return None
+            jwt.get_unverified_header(token)
+        except Exception:
+            try:
+                verify_api_token(token)
+            except (InvalidTokenError, ValueError):
+                raise credentials_exception
+        else:
+            public_key = load_public_key_from_file()
+            try:
+                payload = jwt.decode(
+                    token,
+                    public_key,
+                    algorithms = settings.ALGORITHM,
+                    audience = ["api", "ui"],
+                    options = {"verify_aud": True, "strict_aud": False, "verify_jti": False}
+                )
+                if payload["aud"] == "api":
+                    verify_api_token(payload.get("jti"))
+            except (InvalidTokenError, ValueError) as e:
+                raise credentials_exception
 
 
-def create_access_token(data, expires_delta = None):
-    to_encode = data.copy()
+def create_access_token(aud, sub=None, jti=None, expires_delta=None):
+    payload = dict()
+    if sub:
+        payload["sub"] = sub
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        payload["exp"] = datetime.now(timezone.utc) + expires_delta
+    payload["jti"] = jti or uuid.uuid4().hex
+    payload["aud"] = aud
 
     private_key = load_private_key_from_file()
 
-    encoded_jwt = jwt.encode(to_encode, private_key, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(payload, private_key, algorithm=settings.ALGORITHM)
     return encoded_jwt
