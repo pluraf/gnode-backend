@@ -22,25 +22,29 @@ import ipaddress
 import json
 
 from app.utils import run_command, run_privileged_command
+from app.components.status import get_service_status, ServiceStatus
 
 def get_objects_from_multiline_output(command_response):
     element_list = []
     element = {}
     is_first = True
     first_attribute = ""
-    for line in command_response.splitlines() :
-        [attr, val] = line.split(":", 1)
-        val = val.strip()
-        if val == "--":
-            val = ""
-        attr = attr.strip().lower()
-        if is_first:
-            first_attribute = attr
-            is_first = False
-        if attr == first_attribute and len(element) != 0:
-            element_list.append(element)
-            element = {}
-        element[attr] = val
+    for line in command_response.splitlines():
+        try:
+            [attr, val] = line.split(":", 1)
+            val = val.strip()
+            if val == "--":
+                val = ""
+            attr = attr.strip().lower()
+            if is_first:
+                first_attribute = attr
+                is_first = False
+            if attr == first_attribute and len(element) != 0:
+                element_list.append(element)
+                element = {}
+            element[attr] = val
+        except:
+            continue
     if len(element) != 0:
         element_list.append(element)
     return element_list
@@ -131,11 +135,16 @@ def get_ipv4_settings(device_name):
     ipv4_settings['dns'] = command_resp[0].get('ip4.dns[1]')
     return ipv4_settings
 
+def get_ap_state():
+    if get_service_status("hostapd@SoftAp0") == ServiceStatus.RUNNING:
+        return "enabled"
+    return "disabled"
+
 def get_wifi_state():
     return run_command(["nmcli", "radio", "wifi"])
 
 def get_ethernet_state():
-    return run_command(["nmcli", "radio", "wwan"])
+    return run_command(["nmcli", "networking"])
 
 def get_available_wifi():
     # command: nmcli -m multiline -f 'SSID,SECURITY,DEVICE,SIGNAL,RATE' device wifi list
@@ -205,6 +214,7 @@ def get_current_active_connections(types = []):
 def get_netwok_settings():
     network_settings = {}
     try:
+        network_settings["ap_state"] = get_ap_state()
         network_settings["wifi_state"] = get_wifi_state()
         network_settings["ethernet_state"] = get_ethernet_state()
         network_settings["available_wifi"] = get_available_wifi()
@@ -242,13 +252,22 @@ def set_ipv4_settings(ipv4_method, ipv4_settings, connection_type):
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.gateway', ipv4_settings['gateway']])
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.dns', ipv4_settings['dns']])
         commands.append(['nmcli', 'connection', 'modify', connection_name, 'ipv4.method', 'manual'])
-    commands.append(['nmcli', 'connection', 'down', connection_name])
-    commands.append(['nmcli', 'connection', 'up', connection_name])
+    # commands.append(['nmcli', 'connection', 'down', connection_name])
+    # commands.append(['nmcli', 'connection', 'up', connection_name])
+    commands.append(["nmcli", "device", "reapply", current_connection['device']])
     try:
         for command in commands:
             run_privileged_command(command)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code = 500, detail = "Could not set network settings!")
+
+def set_ap_state(on):
+    if on:
+        run_privileged_command(["systemctl", "start", "hostapd@SoftAp0.service"])
+        run_privileged_command(["systemctl", "enable", "hostapd@SoftAp0.service"])
+    else:
+        run_privileged_command(["systemctl", "disable", "hostapd@SoftAp0.service"])
+        run_privileged_command(["systemctl", "stop", "hostapd@SoftAp0.service"])
 
 def set_wifi_state(on):
     return run_privileged_command(["nmcli", "radio", "wifi", "on" if on else "off"])
@@ -273,6 +292,7 @@ def connect_wifi(ssid, password):
         except subprocess.CalledProcessError as e:
             if "property is invalid" in e.stderr or "Secrets were required" in e.stderr:
                 raise HTTPException(status_code=400, detail="Password is invalid")
+            run_privileged_command(["nmcli", "connection", "delete", "id", ssid])
             raise HTTPException(status_code = 500)
 
 def set_network_settings(user_input):
@@ -291,6 +311,9 @@ def set_network_settings(user_input):
     password = user_input.get("password")
     ipv4_method = user_input.get("ipv4_method")
     ipv4_settings = user_input.get("ipv4_settings", {})
+
+    if "ap_state" in user_input:
+        set_ap_state(user_input["ap_state"] == "enabled")
 
     if "wifi_state" in user_input:
         set_wifi_state(user_input["wifi_state"] == "enabled")

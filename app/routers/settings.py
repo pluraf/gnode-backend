@@ -59,7 +59,8 @@ async def settings_get():
 
     try:
         response["network_settings"] = network_connections.get_netwok_settings()
-    except:
+    except Exception as e:
+        print(e)
         response["network_settings"] = {}
 
     settings = Settings()
