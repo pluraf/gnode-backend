@@ -40,9 +40,9 @@ def run_command(command, shell=False):
 
 def run_privileged_command(command, shell=False):
     if shell:
-        command = "sudo " + command
+        command = "sudo -n " + command
     else:
-        command = ["sudo"] + command
+        command = ["sudo", "-n"] + command
     result = subprocess.run(command, check=True, text=True, capture_output=True, shell=shell)
     return result.stdout.strip()
 
