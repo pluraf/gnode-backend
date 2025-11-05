@@ -46,8 +46,8 @@ def get_m2eb_api_version() -> str:
 
 
 def get_serial_number() -> str:
-    with open("/run/gnode/serial_number", "r") as api_file:
-        return api_file.read()
+    with open("/etc/gnode/serial_number", "r") as api_file:
+        return api_file.read().strip()
 
 
 def get_gnode_api_version():
