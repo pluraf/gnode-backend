@@ -41,6 +41,7 @@ import app.models.settings
 import app.models.meta_data
 import app.models.converter
 import app.models.api_token
+import app.models.device
 
 
 @asynccontextmanager

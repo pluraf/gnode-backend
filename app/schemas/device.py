@@ -29,18 +29,30 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import os
+from pydantic import BaseModel
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
 
-GNODE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/gnode.sqlite"
-AUTHBUNDLE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/authbundles.sqlite"
+class DeviceCreateRequest(BaseModel):
+    type: str
+    enabled: bool
+    description: str
 
-default_engine = create_engine(GNODE_DATABASE_URL, connect_args={"check_same_thread": False})
-auth_engine = create_engine(AUTHBUNDLE_DATABASE_URL, connect_args={"check_same_thread": False})
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
+class DeviceUpdateRequest(BaseModel):
+    type: str | None = None
+    enabled: bool | None = None
+    description: str | None = None
 
-DefaultBase = declarative_base()
-AuthBase = declarative_base()
+
+class DeviceListResponse(BaseModel):
+    id: str
+    type: str
+    enabled: bool
+    description: str
+
+
+class DeviceDetailsResponse(BaseModel):
+    id: str
+    type: str
+    enabled: bool
+    description: str

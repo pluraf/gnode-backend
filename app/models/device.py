@@ -29,18 +29,21 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import os
+from app.database_setup import DefaultBase
+from sqlalchemy import Column, String, Integer, LargeBinary, DateTime, Boolean
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
 
-GNODE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/gnode.sqlite"
-AUTHBUNDLE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/authbundles.sqlite"
+class Device(DefaultBase):
+    __tablename__ = 'devices'
+    id = Column(String, primary_key=True)
+    type = Column(String)
+    enabled = Column(Boolean)
+    description = Column(String)
 
-default_engine = create_engine(GNODE_DATABASE_URL, connect_args={"check_same_thread": False})
-auth_engine = create_engine(AUTHBUNDLE_DATABASE_URL, connect_args={"check_same_thread": False})
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
-
-DefaultBase = declarative_base()
-AuthBase = declarative_base()
+class DeviceData(DefaultBase):
+    __tablename__ = 'device_data'
+    id = Column(Integer, primary_key=True)
+    device_id = Column(String)
+    created = Column(DateTime)
+    blob = Column(LargeBinary)
