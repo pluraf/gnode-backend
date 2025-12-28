@@ -191,3 +191,32 @@ async def device_data(
     buffer = io.BytesIO(data.blob)
 
     return StreamingResponse(buffer, media_type="image/png")
+
+
+@router.get(
+    "/{device_id}/history-data/{depth}",
+    dependencies=[Depends(authenticate)]
+)
+async def device_data(
+    device_id: str,
+    depth: int
+):
+    session = sessionmaker(bind=default_engine)()
+    try:
+        data = (session.query(DeviceData)
+            .filter(DeviceData.device_id == device_id)
+            .order_by(DeviceData.created.desc())[depth]
+        )
+    except IndexError:
+        data = None
+
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device data not found"
+        )
+    session.close()
+
+    buffer = io.BytesIO(data.blob)
+
+    return StreamingResponse(buffer, media_type="image/png")
