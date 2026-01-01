@@ -30,19 +30,26 @@
 
 
 import io
+import struct
+
+from PIL import Image
 
 from fastapi import APIRouter, Form, File, Depends, UploadFile, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import Optional, List
 
-from sqlalchemy import exc
+from sqlalchemy import exc, func
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
 
 import app.settings as settings
 import app.schemas.device as device_schema
+
+from app.dependencies import get_db
 from app.models.device import Device, DeviceData
 from app.database_setup import default_engine
+from app.database_setup import SessionLocalDefault
 from app.auth import authenticate
 
 
@@ -194,29 +201,56 @@ async def device_data(
 
 
 @router.get(
-    "/{device_id}/history-data/{depth}",
+    "/{device_id}/history-data/{latest}-{count}",
     dependencies=[Depends(authenticate)]
 )
 async def device_data(
     device_id: str,
-    depth: int
+    latest: int,
+    count: int,
+    resize: int = 0,
+    session: Session = Depends(get_db),
 ):
-    session = sessionmaker(bind=default_engine)()
-    try:
-        data = (session.query(DeviceData)
-            .filter(DeviceData.device_id == device_id)
-            .order_by(DeviceData.created.desc())[depth]
-        )
-    except IndexError:
-        data = None
+    # We do not care about race conditions, since it's fine if is's not the super latest id
+    latest_id = session.query(func.max(DeviceData.id)).scalar()
 
-    if not data:
+    max_id = latest_id - latest
+
+    rows = (session.query(DeviceData)
+        .filter(DeviceData.device_id == device_id, DeviceData.id <= max_id)
+        .order_by(DeviceData.created.desc())
+        .limit(count).all()
+    )
+
+    if not rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Device data not found"
+            detail="Device history data not found"
         )
-    session.close()
 
-    buffer = io.BytesIO(data.blob)
+    buffer = io.BytesIO()
 
-    return StreamingResponse(buffer, media_type="image/png")
+    for row in rows:
+        blob = row.blob
+
+        if resize > 0:
+            img = Image.open(io.BytesIO(blob))
+
+            target_width = resize
+            w_percent = (target_width / float(img.width))
+            target_height = int((float(img.height) * float(w_percent)))
+            resized_img = img.resize((target_width, target_height), Image.LANCZOS)
+
+            blob_buffer = io.BytesIO()
+            resized_img.save(blob_buffer, format="JPEG")
+            blob_buffer.seek(0)
+
+            buffer.write(struct.pack("<I", len(blob_buffer.getbuffer())))
+            buffer.write(blob_buffer.getbuffer())
+        else:
+            buffer.write(struct.pack("<I", len(blob)))
+            buffer.write(blob)
+
+    buffer.seek(0)
+
+    return StreamingResponse(buffer, media_type="image/jpeg")

@@ -40,7 +40,7 @@ AUTHBUNDLE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/authbundl
 default_engine = create_engine(GNODE_DATABASE_URL, connect_args={"check_same_thread": False})
 auth_engine = create_engine(AUTHBUNDLE_DATABASE_URL, connect_args={"check_same_thread": False})
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
+SessionLocalDefault = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
 
 DefaultBase = declarative_base()
 AuthBase = declarative_base()

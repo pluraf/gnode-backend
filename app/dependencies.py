@@ -15,11 +15,11 @@
 # limitations under the License.
 
 
-from app.database_setup import SessionLocal
+from app.database_setup import SessionLocalDefault
 
 
 def get_db():
-    db = SessionLocal()
+    db = SessionLocalDefault()
     try:
         yield db
     finally:

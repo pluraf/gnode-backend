@@ -4,7 +4,7 @@ import os
 
 from app.main import app
 from app.cleanup_db import run_cleanup
-from app.database_setup import SessionLocal
+from app.database_setup import SessionLocalDefault
 
 @pytest.fixture(scope="function")
 def test_client(mocker):
@@ -17,9 +17,9 @@ def test_client(mocker):
 
 @pytest.fixture
 def default_db_session():
-    session = SessionLocal()
+    session = SessionLocalDefault()
     yield session
-    session.close()  
+    session.close()
 
 # Replace db environment value with test db values for entire test session
 @pytest.fixture(scope="session", autouse=True)

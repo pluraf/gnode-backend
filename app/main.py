@@ -30,7 +30,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.routers.api import router as api_router
 from app.crud.users import load_first_user
-from app.database_setup import SessionLocal, DefaultBase, AuthBase, default_engine, auth_engine
+from app.database_setup import SessionLocalDefault, DefaultBase, AuthBase, default_engine, auth_engine
 from app.components.settings import init_settings_table
 from app.zmq_setup import zmq_context
 
@@ -46,7 +46,7 @@ import app.models.device
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db_session = SessionLocal()
+    db_session = SessionLocalDefault()
     DefaultBase.metadata.create_all(bind=default_engine)
     AuthBase.metadata.create_all(bind=auth_engine)
     try:
