@@ -176,28 +176,35 @@ async def device_edit(
 ###
 
 @router.get(
-    "/{device_id}/frame",
+    "/{device_id}/frame/{frame_id}",
     dependencies=[Depends(authenticate)]
 )
 async def device_data(
-    device_id: str
+    device_id: str,
+    frame_id: str | int,
+    preview: bool = False,
+    session: Session = Depends(get_db),
 ):
-    session = sessionmaker(bind=default_engine)()
-    data = (session.query(DeviceData)
-        .filter(DeviceData.device_id == device_id)
-        .order_by(DeviceData.id.desc())
-        .first()
+    if frame_id != "latest":
+        row = session.query(DeviceData).filter(DeviceData.id == frame_id).scalar()
+    else:
+        row = (session.query(DeviceData)
+                .filter(DeviceData.device_id == device_id)
+                .order_by(DeviceData.id.desc())
+                .first()
     )
-    if not data:
+
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Device data not found"
         )
-    session.close()
 
-    buffer = io.BytesIO(data.blob)
+    buffer = io.BytesIO()
+    pack_blob(buffer, row, preview)
+    buffer.seek(0)
 
-    return StreamingResponse(buffer, media_type="image/png")
+    return StreamingResponse(buffer, media_type="image/jpeg")
 
 
 @router.get(
@@ -208,18 +215,22 @@ async def device_data(
     device_id: str,
     latest: int,
     count: int,
-    resize: int = 0,
+    preview: bool = False,
     session: Session = Depends(get_db),
 ):
     # We do not care about race conditions, since it's fine if is's not the super latest id
-    latest_id = session.query(func.max(DeviceData.id)).scalar()
+    latest_id = (session.query(func.max(DeviceData.id))
+            .filter(DeviceData.device_id == device_id)
+            .scalar()
+    )
 
     max_id = latest_id - latest
 
     rows = (session.query(DeviceData)
         .filter(DeviceData.device_id == device_id, DeviceData.id <= max_id)
         .order_by(DeviceData.created.desc())
-        .limit(count).all()
+        .limit(count)
+        .all()
     )
 
     if not rows:
@@ -229,32 +240,40 @@ async def device_data(
         )
 
     buffer = io.BytesIO()
-
     for row in rows:
-
-        if row.preview:
-            buffer.write(struct.pack("<I", len(row.preview)))
-            buffer.write(row.preview)
-
-        elif resize > 0:
-            img = Image.open(io.BytesIO(row.blob))
-
-            target_width = resize
-            w_percent = (target_width / float(img.width))
-            target_height = int((float(img.height) * float(w_percent)))
-            resized_img = img.resize((target_width, target_height), Image.LANCZOS)
-
-            blob_buffer = io.BytesIO()
-            resized_img.save(blob_buffer, format="JPEG")
-            blob_buffer.seek(0)
-
-            buffer.write(struct.pack("<I", len(blob_buffer.getbuffer())))
-            buffer.write(blob_buffer.getbuffer())
-
-        else:
-            buffer.write(struct.pack("<I", len(row.blob)))
-            buffer.write(row.blob)
+        pack_blob(buffer, row, preview)
 
     buffer.seek(0)
 
     return StreamingResponse(buffer, media_type="image/jpeg")
+
+
+def make_preview(blob, target_width):
+    img = Image.open(io.BytesIO(blob))
+
+    w_percent = (target_width / float(img.width))
+    target_height = int((float(img.height) * float(w_percent)))
+    resized_img = img.resize((target_width, target_height), Image.LANCZOS)
+
+    blob_buffer = io.BytesIO()
+    resized_img.save(blob_buffer, format="JPEG")
+    blob_buffer.seek(0)
+
+    return blob_buffer
+
+
+def pack_blob(buffer, row, preview):
+    if preview:
+        if row.preview:
+            buffer.write(struct.pack("<I", row.id))
+            buffer.write(struct.pack("<I", len(row.preview)))
+            buffer.write(row.preview)
+        else:
+            blob_buffer = make_preview(row.blob, 300)
+            buffer.write(struct.pack("<I", row.id))
+            buffer.write(struct.pack("<I", len(blob_buffer.getbuffer())))
+            buffer.write(blob_buffer.getbuffer())
+    else:
+        buffer.write(struct.pack("<I", row.id))
+        buffer.write(struct.pack("<I", len(row.blob)))
+        buffer.write(row.blob)
