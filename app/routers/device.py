@@ -185,7 +185,7 @@ async def device_data(
     session = sessionmaker(bind=default_engine)()
     data = (session.query(DeviceData)
         .filter(DeviceData.device_id == device_id)
-        .order_by(DeviceData.created.desc())
+        .order_by(DeviceData.id.desc())
         .first()
     )
     if not data:
@@ -231,10 +231,13 @@ async def device_data(
     buffer = io.BytesIO()
 
     for row in rows:
-        blob = row.blob
 
-        if resize > 0:
-            img = Image.open(io.BytesIO(blob))
+        if row.preview:
+            buffer.write(struct.pack("<I", len(row.preview)))
+            buffer.write(row.preview)
+
+        elif resize > 0:
+            img = Image.open(io.BytesIO(row.blob))
 
             target_width = resize
             w_percent = (target_width / float(img.width))
@@ -247,9 +250,10 @@ async def device_data(
 
             buffer.write(struct.pack("<I", len(blob_buffer.getbuffer())))
             buffer.write(blob_buffer.getbuffer())
+
         else:
-            buffer.write(struct.pack("<I", len(blob)))
-            buffer.write(blob)
+            buffer.write(struct.pack("<I", len(row.blob)))
+            buffer.write(row.blob)
 
     buffer.seek(0)
 

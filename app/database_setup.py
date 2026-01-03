@@ -34,10 +34,14 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-GNODE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/gnode.sqlite"
-AUTHBUNDLE_DATABASE_URL = "sqlite:///" + os.getenv("GNODE_DB_DIR") + "/authbundles.sqlite"
+GNODE_DATABASE_URL = os.getenv("GNODE_DATABASE_URL")
+AUTHBUNDLE_DATABASE_URL = os.getenv("AUTHBUNDLE_DATABASE_URL")
 
-default_engine = create_engine(GNODE_DATABASE_URL, connect_args={"check_same_thread": False})
+if GNODE_DATABASE_URL.startswith("sqlite"):
+    default_engine = create_engine(GNODE_DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    default_engine = create_engine(GNODE_DATABASE_URL)
+
 auth_engine = create_engine(AUTHBUNDLE_DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocalDefault = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)

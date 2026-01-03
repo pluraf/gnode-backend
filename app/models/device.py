@@ -47,3 +47,4 @@ class DeviceData(DefaultBase):
     device_id = Column(String)
     created = Column(DateTime)
     blob = Column(LargeBinary)
+    preview = Column(LargeBinary)
