@@ -30,9 +30,11 @@
 
 
 import io
-import struct
+import json
 
 from PIL import Image
+
+import cbor2
 
 from fastapi import APIRouter, Form, File, Depends, UploadFile, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordBearer
@@ -200,11 +202,19 @@ async def device_data(
             detail="Device data not found"
         )
 
+    data = {
+        "frame_id": row.id,
+        "device_id": row.device_id,
+        "data_frame": row.preview or make_preview(row.blob, 300) if preview else row.blob,
+    }
+    if row.sensor_data is not None:
+        data["sensor_data"] = row.sensor_data
+
     buffer = io.BytesIO()
-    pack_blob(buffer, row, preview)
+    cbor2.dump(data, buffer)
     buffer.seek(0)
 
-    return StreamingResponse(buffer, media_type="image/jpeg")
+    return StreamingResponse(buffer, media_type="application/octet-stream")
 
 
 @router.get(
@@ -228,7 +238,7 @@ async def device_data(
 
     rows = (session.query(DeviceData)
         .filter(DeviceData.device_id == device_id, DeviceData.id <= max_id)
-        .order_by(DeviceData.created.desc())
+        .order_by(DeviceData.id.desc())
         .limit(count)
         .all()
     )
@@ -239,13 +249,23 @@ async def device_data(
             detail="Device history data not found"
         )
 
-    buffer = io.BytesIO()
+    data = []
     for row in rows:
-        pack_blob(buffer, row, preview)
+        el = {
+                "frame_id": row.id,
+                "device_id": row.device_id,
+                "data_frame": row.preview or make_preview(row.blob, 300) if preview else row.blob
+        }
+        if row.sensor_data is not None:
+            el["sensor_data"] = row.sensor_data
 
+        data.append(el)
+
+    buffer = io.BytesIO()
+    cbor2.dump(data, buffer)
     buffer.seek(0)
 
-    return StreamingResponse(buffer, media_type="image/jpeg")
+    return StreamingResponse(buffer, media_type="application/octet-stream")
 
 
 def make_preview(blob, target_width):
@@ -260,20 +280,3 @@ def make_preview(blob, target_width):
     blob_buffer.seek(0)
 
     return blob_buffer
-
-
-def pack_blob(buffer, row, preview):
-    if preview:
-        if row.preview:
-            buffer.write(struct.pack("<I", row.id))
-            buffer.write(struct.pack("<I", len(row.preview)))
-            buffer.write(row.preview)
-        else:
-            blob_buffer = make_preview(row.blob, 300)
-            buffer.write(struct.pack("<I", row.id))
-            buffer.write(struct.pack("<I", len(blob_buffer.getbuffer())))
-            buffer.write(blob_buffer.getbuffer())
-    else:
-        buffer.write(struct.pack("<I", row.id))
-        buffer.write(struct.pack("<I", len(row.blob)))
-        buffer.write(row.blob)

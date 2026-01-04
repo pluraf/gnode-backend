@@ -48,3 +48,4 @@ class DeviceData(DefaultBase):
     created = Column(DateTime)
     blob = Column(LargeBinary)
     preview = Column(LargeBinary)
+    sensor_data = Column(String)
