@@ -122,6 +122,7 @@ async def authenticate(token: str = Depends(oauth2_scheme)):
                 )
                 if payload["aud"] == "api":
                     verify_api_token(payload.get("jti"))
+                return payload
             except (InvalidTokenError, ValueError) as e:
                 raise credentials_exception
 
