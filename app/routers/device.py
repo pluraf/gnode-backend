@@ -31,6 +31,7 @@
 
 import io
 import json
+from datetime import timezone
 
 from PIL import Image
 
@@ -205,13 +206,14 @@ async def device_data(
     data = {
         "frame_id": row.id,
         "device_id": row.device_id,
-        "data_frame": row.preview or make_preview(row.blob, 300) if preview else row.blob,
+        "created": row.created,
+        "data_frame": row.preview or make_preview(row.blob, 300) if preview and row.blob else row.blob,
     }
     if row.sensor_data is not None:
         data["sensor_data"] = row.sensor_data
 
     buffer = io.BytesIO()
-    cbor2.dump(data, buffer)
+    cbor2.dump(data, buffer, timezone=timezone.utc)
     buffer.seek(0)
 
     return StreamingResponse(buffer, media_type="application/octet-stream")
@@ -254,7 +256,8 @@ async def device_data(
         el = {
                 "frame_id": row.id,
                 "device_id": row.device_id,
-                "data_frame": row.preview or make_preview(row.blob, 300) if preview else row.blob
+                "created": row.created,
+                "data_frame": row.preview or make_preview(row.blob, 300) if preview and row.blob else row.blob
         }
         if row.sensor_data is not None:
             el["sensor_data"] = row.sensor_data
@@ -262,7 +265,7 @@ async def device_data(
         data.append(el)
 
     buffer = io.BytesIO()
-    cbor2.dump(data, buffer)
+    cbor2.dump(data, buffer, timezone=timezone.utc)
     buffer.seek(0)
 
     return StreamingResponse(buffer, media_type="application/octet-stream")
