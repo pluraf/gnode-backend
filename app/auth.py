@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# Copyright (c) 2024 Pluraf Embedded AB <code@pluraf.com>
+# Copyright (c) 2024-2026 Pluraf Embedded AB <code@pluraf.com>
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import os
 import jwt
 import uuid
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from jwt.exceptions import InvalidTokenError
 
@@ -41,7 +41,15 @@ from app.models.api_token import ApiToken
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=settings.TOKEN_AUTH_URL, auto_error=False)
 
 
+class KeyCache:
+    public_key = None
+    private_key = None
+
+
 def load_private_key_from_file():
+    if KeyCache.private_key is not None:
+        return KeyCache.private_key
+
     private_key_path = os.getenv("GNODE_PRIVATE_KEY_PATH")
     if not private_key_path:
         raise RuntimeError("GNODE_PRIVATE_KEY_PATH not set!")
@@ -51,12 +59,16 @@ def load_private_key_from_file():
             private_key = serialization.load_pem_private_key(
                 key_file.read(), password=None, backend=default_backend()
             )
+        KeyCache.private_key = private_key
         return private_key
     except (ValueError, InvalidKey) as e:
         raise RuntimeError(f"GNODE_PRIVATE_KEY: Invalid PEM file or key format. {e}")
 
 
 def load_public_key_from_file():
+    if KeyCache.public_key is not None:
+        return KeyCache.public_key
+
     public_key_path = os.getenv("GNODE_PUBLIC_KEY_PATH")
     if not public_key_path:
         raise RuntimeError("GNODE_PUBLIC_KEY_PATH not set!")
@@ -64,6 +76,7 @@ def load_public_key_from_file():
     try:
         with open(public_key_path, "rb") as key_file:
             public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
+        KeyCache.public_key = public_key
         return public_key
     except (ValueError, InvalidKey) as e:
         raise RuntimeError(f"GNODE_PUBLIC_KEY: Invalid PEM file or key format. {e}")
