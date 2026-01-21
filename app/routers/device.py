@@ -209,8 +209,12 @@ async def device_data(
         "created": row.created,
         "data_frame": row.preview or make_preview(row.blob, 300) if preview and row.blob else row.blob,
     }
+
     if row.sensor_data is not None:
-        data["sensor_data"] = row.sensor_data
+        if type(row.sensor_data) is bytes:
+            data["sensor_data"] = json.loads(row.sensor_data.decode())
+        else:
+            data["sensor_data"] = row.sensor_data
 
     buffer = io.BytesIO()
     cbor2.dump(data, buffer, timezone=timezone.utc)
@@ -259,8 +263,12 @@ async def device_data(
                 "created": row.created,
                 "data_frame": row.preview or make_preview(row.blob, 300) if preview and row.blob else row.blob
         }
+
         if row.sensor_data is not None:
-            el["sensor_data"] = row.sensor_data
+            if type(row.sensor_data) is bytes:
+                el["sensor_data"] = json.loads(row.sensor_data.decode())
+            else:
+                el["sensor_data"] = row.sensor_data
 
         data.append(el)
 
